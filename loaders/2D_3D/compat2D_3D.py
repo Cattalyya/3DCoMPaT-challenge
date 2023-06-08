@@ -2,9 +2,13 @@
 Dataloaders for the mixed 2D-3D 3DCoMPaT tasks.
 """
 from functools import partial
+import sys
+import os
 
 import webdataset as wds
 from compat2D import EvalLoader, FullLoader
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../3D/')))
 from compat3D_PC import EvalLoader_PC, StylizedShapeLoader_PC
 
 
@@ -16,7 +20,8 @@ def fetch_3D_PC(loader_3D, style_id_idx, test_mode, loader_2D):
     for tuple_2D in loader_2D:
         shape_id = tuple_2D[0][0]
         style_id = tuple_2D[style_id_idx][0]
-
+        # print("@catt shape_id, style_id:", shape_id, style_id)
+        # print("tuple_2D:", tuple_2D)
         # Fetch pointcloud
         if not test_mode:
             (
@@ -29,6 +34,11 @@ def fetch_3D_PC(loader_3D, style_id_idx, test_mode, loader_2D):
             points = loader_3D.get_stylized_shape(shape_id, style_id)[-1]
             tuple_3D = [points]
 
+        for i in range(len(tuple_2D)):
+            try:
+                print(tuple_2D[i].shape)
+            except:
+                print(len(tuple_2D[i]))
         yield list(tuple_2D) + tuple_3D
 
 
@@ -91,6 +101,7 @@ class FullLoader2D_3D(FullLoader):
 
     def make_loader(self, batch_size, num_workers):
         # Instantiating dataset
+        # compose() applies the composed transformation to the dataset
         dataset = super().make_dataset(batch_size).compose(self.fetch_3D)
 
         # Instantiating loader
