@@ -71,7 +71,7 @@ print_freq: 10
 val_freq: 1
 
 # ----------------- Model related
-pretrained_path: /home/ahmems0a/repos/PointNeXt/log/coarse/coarse-train-pointnext-s_c160-2048/checkpoint/best_model.pth 
+# pretrained_path: /home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/3D/PointNeXt/pretrained/best_model.pth 
 
 wandb:
   project: PointNext-compat_corase

@@ -17,6 +17,8 @@ import torch.nn.functional as F
 from collections import defaultdict, Counter
 import yaml
 from torch.utils.tensorboard import SummaryWriter
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../../../')))
 from compat_loader import CompatLoader3D as CompatSeg
 from compat_utils import *
 
@@ -204,9 +206,9 @@ def main(args, cfg):
 
     root = '../data/'+args.data_name+'_grained/'
     print(root)
-    TRAIN_DATASET = CompatSeg(data_root=root, num_points=args.npoint, split='train', transform=None)
-    TEST_DATASET = CompatSeg(data_root =root, num_points=args.npoint, split='valid', transform=None)
-    VALID_DATASET = CompatSeg(data_root=root, num_points=args.npoint, split='test', transform=None)
+    TRAIN_DATASET = CompatSeg(data_root=root, num_points=args.npoint, split='train', transform=None, seg_mode="part")
+    TEST_DATASET = CompatSeg(data_root =root, num_points=args.npoint, split='valid', transform=None, seg_mode="part")
+    VALID_DATASET = CompatSeg(data_root=root, num_points=args.npoint, split='valid', transform=None, seg_mode="part") # used to be split='test'
 
     validDataLoader = torch.utils.data.DataLoader(VALID_DATASET, batch_size=cfg.batch_size, shuffle=True, num_workers=10, drop_last=True)
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=cfg.batch_size, shuffle=True, num_workers=10, drop_last=True)

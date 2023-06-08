@@ -3,7 +3,7 @@
 #SBATCH -N 1
 #SBATCH -o /ibex/scratch/ahmems0a/pointnext/cls/run_v_2048.out
 #SBATCH -e /ibex/scratch/ahmems0a/pointnext/cls/run_v_2048.err
-#SBATCH --mail-user=mahmoud.ahmed@kaust.edu.sa
+#SBATCH --mail-user=cattalyya@hotmail.com
 #SBATCH --mail-type=FAIL,TIME_LIMIT,TIME_LIMIT_90
 #SBATCH --time=20:00
 #SBATCH --mem=32G
