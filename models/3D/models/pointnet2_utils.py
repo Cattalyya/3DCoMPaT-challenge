@@ -79,6 +79,7 @@ def farthest_point_sample(xyz, npoint):
     batch_indices = torch.arange(B, dtype=torch.long).to(device)
     for i in range(npoint):
         centroids[:, i] = farthest
+        # print(batch_indices, farthest, B, N, C, xyz.shape)
         centroid = xyz[batch_indices, farthest, :].view(B, 1, 3)
         dist = torch.sum((xyz - centroid) ** 2, -1)
         mask = dist < distance

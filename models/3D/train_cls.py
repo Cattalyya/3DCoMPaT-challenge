@@ -161,10 +161,10 @@ def main(args):
     log_string("Load dataset ...")
     root = os.path.join(os.getcwd(), "data/" + args.data_name + "_grained/")
     TRAIN_DATASET = Compat(
-        data_root=root, num_points=args.num_point, split="train", transform=None
+        data_root=root, num_points=args.num_point, split="train", transform=None, seg_mode="part"
     )
     VAL_DATASET = Compat(
-        data_root=root, num_points=args.num_point, split="valid", transform=None
+        data_root=root, num_points=args.num_point, split="valid", transform=None, seg_mode="part"
     )
 
     trainDataLoader = torch.utils.data.DataLoader(

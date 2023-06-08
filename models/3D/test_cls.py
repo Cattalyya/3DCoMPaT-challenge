@@ -122,7 +122,7 @@ def main(args):
     log_string("Load dataset ...")
     root = os.path.join(os.getcwd(), "data/" + args.data_name + "_grained/")
     TEST_DATASET = Compat(
-        data_root=root, num_points=args.num_point, split="test", transform=None
+        data_root=root, num_points=args.num_point, split="test", transform=None, seg_mode="part"
     )
     testDataLoader = torch.utils.data.DataLoader(
         TEST_DATASET, batch_size=args.batch_size, shuffle=False, num_workers=10

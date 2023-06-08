@@ -101,10 +101,10 @@ def main(args):
 
     root = os.path.join(os.getcwd(), "data/" + args.data_name + "_grained/")
     TRAIN_DATASET = CompatSeg(
-        data_root=root, num_points=args.npoint, split="train", transform=None
+        data_root=root, num_points=args.npoint, split="train", transform=None, seg_mode="part",
     )
     VAL_DATASET = CompatSeg(
-        data_root=root, num_points=args.npoint, split="valid", transform=None
+        data_root=root, num_points=args.npoint, split="valid", transform=None, seg_mode="part",-
     )
 
     trainDataLoader = torch.utils.data.DataLoader(
@@ -244,11 +244,11 @@ def main(args):
             )
             points = points.transpose(2, 1)
             if shape_prior:
+                # print("SHAPE PRIOR size=", points.shape, to_categorical(label, num_classes).shape)
                 seg_pred, trans_feat = classifier(
                     points, to_categorical(label, num_classes)
                 )
-            else:
-                seg_pred, trans_feat = classifier(points)
+            else:                seg_pred, trans_feat = classifier(points)
             seg_pred = seg_pred.contiguous().view(-1, num_part)
             target = target.view(-1, 1)[:, 0]
             pred_choice = seg_pred.data.max(1)[1]
