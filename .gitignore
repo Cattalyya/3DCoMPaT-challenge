@@ -8,6 +8,16 @@ __pycache__/
 # C extensions
 *.so
 
+# Mac OS
+*._.DS_Store
+
+# By product
+models/*/log/
+models/*/*/logs/
+models/*/*/ckpts/
+models/*/pretrain/
+models/*/*/pretrain/
+
 # Distribution / packaging
 .Python
 env/
@@ -15,6 +25,7 @@ build/
 develop-eggs/
 dist/
 downloads/
+download/
 eggs/
 .eggs/
 lib/
