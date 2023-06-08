@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(
 from compat2D import GCRLoader
 from custom_metrics import compute_overall_iou, compute_overall_precision
 from tqdm import tqdm
-from transformers import Segformerconfig, SegformerForSemanticSegmentation
+from transformers import SegformerConfig, SegformerForSemanticSegmentation
 
 
 def parse_args(argv):
@@ -56,7 +56,8 @@ def parse_args(argv):
     parser.add_argument(
         "--root_url",
         type=str,
-        required=True,
+        required=False,
+        default="/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/download/3DCoMPaT_2D/",
         help="Root URL of the 2D data",
     )
     parser.add_argument(
@@ -96,28 +97,21 @@ def parse_args(argv):
     return args
 
 
-def load_data(args):
+def load_data(args, split="test"):
     """
     Instantiate the data loaders.
     """
-    gcr_train_loader = GCRLoader(
+    gcr_loader = GCRLoader(
         root_url=args.root_url,
-        split="train",
+        split=split,
         semantic_level=args.data_type,
         n_compositions=args.n_comp,
     ).make_loader(batch_size=args.batch_size, num_workers=2)
 
-    gcr_valid_loader = GCRLoader(
-        root_url=args.root_url,
-        split="valid",
-        semantic_level=args.data_type,
-        n_compositions=args.n_comp,
-    ).make_loader(batch_size=32, num_workers=2)
-
-    return gcr_train_loader, gcr_valid_loader
+    return gcr_loader
 
 
-def training_and_evaluating_step(gcr_train_loader, gcr_valid_loader, args):
+def inference(gcr_loader, args):
     """
     Train and evaluate the model.
     """
@@ -129,14 +123,26 @@ def training_and_evaluating_step(gcr_train_loader, gcr_valid_loader, args):
 
     num_labels = PART_CLASSES if args.task == "part" else MAT_CLASSES
 
-    config = SegformerConfig.from_pretrained(args.model_name, num_labels=num_labels)
-    model = SegformerForSemanticSegmentation.from_pretrained(
-        args.model_name, config=config, ignore_mismatched_sizes=True
-    )
+    # Path to the pre-trained checkpoint
+    pretrain_path = '/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D/segmentation/pretrain/coarse_{}_best_model.pth'.format(args.task)
 
-    if torch.cuda.device_count() > 1:
-        print("Using", torch.cuda.device_count(), "GPUs.")
-        model = nn.DataParallel(model)
+    # Create an instance of SegformerForSemanticSegmentation
+    config = SegformerConfig()
+    config.num_labels = num_labels
+    model = SegformerForSemanticSegmentation(config)
+
+    # if torch.cuda.device_count() > 1:
+    #     print("Using", torch.cuda.device_count(), "GPUs.")
+    model = nn.DataParallel(model)
+    # config = SegformerConfig.from_pretrained(args.model_name, num_labels=num_labels)
+    # model = SegformerForSemanticSegmentation.from_pretrained(
+    #     args.model_name, config=config, ignore_mismatched_sizes=True
+    # )
+    checkpoint = torch.load(pretrain_path, map_location=torch.device('cpu'))
+    # print(checkpoint.keys())
+    # return
+    # Load the pre-trained weights
+    model.load_state_dict(checkpoint)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -176,69 +182,11 @@ def training_and_evaluating_step(gcr_train_loader, gcr_valid_loader, args):
     # Define the training loop
     best_MIOU = 0
     best_mAP = 0
-    for epoch in range(args.num_epochs):
-        # Train the model
-        model.train()
-        train_losses = []
-        pbar_train = tqdm(gcr_train_loader, desc=f"Epoch {epoch+1} Training")
-        for images, _, y_parts, y_mats in pbar_train:
-            y = y_parts if args.task == "part" else y_mats
-            optimizer.zero_grad()
-            loss = model(images.to(device), y.to(device))[0]
-            reduced_loss = loss.mean()
-            reduced_loss.backward()
-            optimizer.step()
-            train_losses.append(reduced_loss.item())
-            pbar_train.set_description(
-                f"Epoch {epoch+1} Training, Train loss: {np.mean(train_losses):.4f}"
-            )
-        scheduler.step()
 
-        # Evaluate the model
-        model.eval()
-
-        # Torch array of predictions
-        general_miou = []
-        precisions = []
-        for images, _, y_parts, y_mats in tqdm(
-            gcr_valid_loader, desc=f"Epoch {epoch+1} Validation"
-        ):
-            y = y_parts if args.task == "part" else y_mats
-            with torch.no_grad():
-                outputs = model(images.to(device))["logits"]
-                # Upsample the logits
-                upsampled_logits = nn.functional.interpolate(
-                    outputs, size=y.shape[-2:], mode="bicubic", align_corners=False
-                )
-                predicted = (
-                    torch.softmax(upsampled_logits, dim=1).argmax(dim=1).cpu().numpy()
-                )
-                y_truth = y.cpu().numpy()
-                miou = compute_overall_iou(predicted, y_truth, num_labels)
-                prec = compute_overall_precision(predicted, y_truth)
-                general_miou = general_miou + miou
-                precisions = precisions + prec
-
-        # Compute the metrics: mean IOU and mean precision
-        mIOU = np.nanmean(general_miou)
-        mPrecision = np.nanmean(precisions)
-        print(
-            f"Epoch {epoch}:",
-            f"Train loss: {np.mean(train_losses):.4f}",
-            f"mIOU: {mIOU:.6f}",
-            f"mPrecision: {mPrecision:.6f}",
-        )
-
-        if mIOU > best_MIOU:
-            best_MIOU = mIOU
-            best_mAP = mPrecision
-            print("Saving model...")
-            torch.save(model.state_dict(), checkpoint_name)
-
-    # Evaluate the best model
-    for images, _, y_parts, y_mats in tqdm(
-        gcr_valid_loader, desc=f"Epoch {epoch+1} Validation"
-    ):
+    # Torch array of predictions
+    general_miou = []
+    precisions = []
+    for images, _, y_parts, y_mats in tqdm(gcr_loader):
         y = y_parts if args.task == "part" else y_mats
         with torch.no_grad():
             outputs = model(images.to(device))["logits"]
@@ -249,18 +197,24 @@ def training_and_evaluating_step(gcr_train_loader, gcr_valid_loader, args):
             predicted = (
                 torch.softmax(upsampled_logits, dim=1).argmax(dim=1).cpu().numpy()
             )
+            y_truth = y.cpu().numpy()
+            miou = compute_overall_iou(predicted, y_truth, num_labels)
+            prec = compute_overall_precision(predicted, y_truth)
+            general_miou = general_miou + miou
+            precisions = precisions + prec
 
-    end_time = time.time()
-    print(f"Training time: {end_time - start_time:.2f} seconds")
-
-    print("Best mIOU: ", best_MIOU)
-    print("Best mAP: ", best_mAP)
-
+    # Compute the metrics: mean IOU and mean precision
+    mIOU = np.nanmean(general_miou)
+    mPrecision = np.nanmean(precisions)
+    print(
+        f"mIOU: {mIOU:.6f}",
+        f"mPrecision: {mPrecision:.6f}",
+    )
 
 def main(argv=None):
     args = parse_args(argv)
-    gcr_train_loader, gcr_valid_loader = load_data(args)
-    training_and_evaluating_step(gcr_train_loader, gcr_valid_loader, args)
+    gcr_loader = load_data(args, split="valid")
+    inference(gcr_loader, args)
 
 
 if __name__ == "__main__":

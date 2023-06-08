@@ -35,6 +35,7 @@ def compute_topk_acc(pred, targets, topk):
     topk = min(topk, pred.shape[1])
     _, pred = pred.topk(topk, 1, True, True)
     pred = pred.t()
+    # print(pred, targets)
     correct = pred.eq(targets.view(1, -1).expand_as(pred))
     hits_tag = correct[:topk].reshape(-1).float().sum(0)
 
