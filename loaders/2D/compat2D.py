@@ -97,7 +97,7 @@ class CompatLoader2D:
         comp_str = "%04d" % (n_compositions - 1)
         self.url = "%s/%s/%s_%s_{0000..%s}.tar" % (
             root_url,
-            "test_no_gt" if split == "test" else split,
+            "test" if split == "test" else split, #"test_no_gt"
             split,
             semantic_level,
             comp_str,
@@ -334,7 +334,6 @@ class FullLoader(CompatLoader2D):
             )
             .batched(batch_size, partial=True)
         ).compose(self.split_masks)
-
         return dataset
 
     def make_loader(self, batch_size, num_workers):
