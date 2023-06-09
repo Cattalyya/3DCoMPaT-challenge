@@ -17,6 +17,7 @@ models/*/*/logs/
 models/*/*/ckpts/
 models/*/pretrain/
 models/*/*/pretrain/
+models/2D_3D/out_np/
 
 # Distribution / packaging
 .Python
