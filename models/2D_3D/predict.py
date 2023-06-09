@@ -146,7 +146,8 @@ def main(argv=None):
     ##== 1. Setup model
     part_log_dir = "2023-06-04_05-57"
     cls_log_dir = "2023-06-08_14-31"
-    pointnet2 = PointNet2(part_log_dir, cls_log_dir, shape_prior, args)
+    mat_log_dir = ""
+    pointnet2 = PointNet2(part_log_dir, cls_log_dir, mat_log_dir, shape_prior, args)
 
     saved_results = dict()
 

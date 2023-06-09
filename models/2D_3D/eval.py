@@ -192,9 +192,10 @@ def main(argv=None):
             logits3d, predicted3d = pointnet2.infer_part(points, shape_label)
             logits3d, predicted3d =  logits3d.cpu(), predicted3d
             ## Predict Mat 3D
-            pointnet2.matmodel = pointnet2.matmodel.eval()
-            logits3d_mat, predicted3d_mat = pointnet2.infer_mat(points, shape_label)
-            logits3d_mat, predicted3d_mat =  logits3d_mat.cpu(), predicted3d_mat
+            if mat_log_dir != "":
+                pointnet2.matmodel = pointnet2.matmodel.eval()
+                logits3d_mat, predicted3d_mat = pointnet2.infer_mat(points, shape_label)
+                logits3d_mat, predicted3d_mat =  logits3d_mat.cpu(), predicted3d_mat
             
             if not args.nofuse:
                 logits3d_from2d = get_logits_from2d(points.cpu(), logits.cpu(), cam_parameters.cpu())
@@ -203,23 +204,24 @@ def main(argv=None):
                 logits3d_extended = torch.cat((zeros_tensor, logits3d), dim=2).cpu()
                 fused_logits = logits3d_from2d + logits3d_extended
 
-                saved_results = update_part_logits(saved_results, shape_id, fused_logits)
+                saved_results = update_part_logits(saved_results, shape_id, style_id, fused_logits)
                 fused_prediction_np = get_fused_prediction(fused_logits, predicted3d)
                 correct_fuse_multi = np.sum(points_part_labels[0] == fused_prediction_np[0])
-                saved_cls_predictions, saved_part_predictions = update_predictions(shape_id, predicted_cls, fused_prediction_np, saved_cls_predictions, saved_part_predictions)
+                saved_cls_predictions, saved_part_predictions = update_predictions(shape_id, style_id, predicted_cls, fused_prediction_np, saved_cls_predictions, saved_part_predictions)
 
             ## Count scores
             correct3d = np.sum(points_part_labels == predicted3d)
             correct2d = np.sum(part_mask == predicted)
-            correct3d_mat = np.sum(points_mat_labels == predicted3d_mat)
-            correct2d_mat = np.sum(mat_mask == predicted_mat)
+
+            correct3d_mat = np.sum(points_mat_labels == predicted3d_mat) if mat_log_dir != "" else 0
+            correct2d_mat = np.sum(mat_mask == predicted_mat) if mat_log_dir != "" else 0
 
             if args.debug:
                 print(points_part_labels[0], fused_prediction_np[0])
                 print("3D: {}\tFuse_single: {}\tFuse_multi:{}".format(np.sum(points_part_labels[0] == predicted3d[0]), -1, correct_fuse_multi))
             
             if args.debug:
-                print("Part(2D, 3D): {} {}\t Mat(2D, 3D): {} {}".format(correct2d, correct3d, correct2d_mat, correct3d_mat)
+                print("Part(2D, 3D): {} {}\t Mat(2D, 3D): {} {}".format(correct2d, correct3d, correct2d_mat, correct3d_mat))
             # print(points_part_labels[0], predicted_oncloud, correct2d3d)
         total_correct3d += correct3d
         total_correct2d += correct2d

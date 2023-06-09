@@ -1,3 +1,6 @@
+import torch
+import numpy as np
+
 
 # Modified from https://colab.research.google.com/drive/1wr0CUhict2xn8umvCh7da3iX0ku058h4#scrollTo=FCrax0nI67xQ
 def project_to_2D(pointcloud, cam_parameters):
