@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from models.pointnet2_utils import PointNetSetAbstraction,PointNetFeaturePropagation
+from pointnet2_utils import PointNetSetAbstraction,PointNetFeaturePropagation
 
 import logging
 logger = logging.getLogger("Model")
