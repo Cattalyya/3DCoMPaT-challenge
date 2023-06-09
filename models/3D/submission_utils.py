@@ -9,11 +9,61 @@ import numpy as np
 
 N_POINTS = 2048
 MAX_GROUPS = 30
-
+DEFAULT_OUTFILE = "/home/ubuntu/3dcompat/workspace/submission/parts_fused_pred_test.hdf5"
+        
 def open_hdf5(hdf5_file, mode):
     hdf5_f = h5py.File(hdf5_file, mode)
     return hdf5_f
 
+class Submission:
+    def __init__(self, n_shapes, outpath=DEFAULT_OUTFILE):
+        # Creating the selected split
+        self.n_shapes = n_shapes
+        self.out_hdf5 = open_hdf5(outpath, mode='w')
+        self.out_hdf5.create_dataset('shape_preds',
+                                    shape=(n_shapes),
+                                    dtype='uint8')
+        self.out_hdf5.create_dataset('part_labels',
+                                    shape=(n_shapes, N_POINTS),
+                                    dtype='int16')
+        self.out_hdf5.create_dataset('mat_labels',
+                                    shape=(n_shapes, N_POINTS),
+                                    dtype='uint8')
+        self.out_hdf5.create_dataset('part_mat_pairs',
+                                    shape=(n_shapes, MAX_GROUPS, 2),
+                                    dtype='int16')
+        self.out_hdf5.create_dataset('point_grouping',
+                                    shape=(n_shapes, N_POINTS),
+                                    dtype='uint8')
+
+        self.cls_loaded = set()
+        self.parts_loaded = set()
+    # sid = unique shape_id
+    def update_cl(self, i, cl, sid):
+        # print("cl=", int(cl))
+        self.out_hdf5['shape_preds'][i]= int(cl)
+        self.cls_loaded.add(sid)
+        assert cl <= 41 and cl >= 0
+
+    def update_parts(self, i, parts, sid):
+        assert len(parts.shape) == 1
+        assert parts.shape[0] == N_POINTS
+        self.parts_loaded.add(sid)
+        # print("parts=", parts)
+        self.out_hdf5['part_labels'][i] = parts
+
+    def sanity_check(self, checked_sids):
+        ncls, nparts = len(self.cls_loaded), len(self.parts_loaded)
+        assert self.n_shapes == nparts and self.n_shapes == ncls
+        if checked_sids != None:
+            assert len(checked_sids) == self.n_shapes
+            assert len(checked_sids - self.cls_loaded) == 0
+            assert len(checked_sids - self.parts_loaded) == 0
+
+    def write_file(self, checked_sids=None):
+        self.sanity_check(checked_sids)
+        self.out_hdf5.close()
+        
 
 def write_result(shape_preds):
 # # Instantiating the dataloader
