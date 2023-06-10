@@ -368,7 +368,7 @@ class EvalLoader(CompatLoader2D):
         depth_transform=wds_identity,
         **kwargs,
     ):
-        super().__init__(*args, split="test", **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.depth_transform = partial(depth.depth_decode, depth_transform)
 

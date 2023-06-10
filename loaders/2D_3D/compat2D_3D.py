@@ -170,6 +170,7 @@ class EvalLoader2D_3D(EvalLoader):
         semantic_level,
         num_points,
         n_compositions,
+        split,
         pc_transform=None,
         pc_half_precision=False,
         normalize_points=False,
@@ -180,13 +181,15 @@ class EvalLoader2D_3D(EvalLoader):
             raise ValueError("n_compositions must be <= 10.")
         super().__init__(
             *args,
+            root_url=root_url_2D,
+            split=split,
             semantic_level=semantic_level,
             n_compositions=n_compositions,
-            root_url=root_url_2D,
             **kwargs,
         )
         self.loader_3D = EvalLoader_PC(
             root_dir=root_dir_3D,
+            split=split,
             semantic_level=semantic_level,
             num_points=num_points,
             transform=pc_transform,

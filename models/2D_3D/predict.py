@@ -197,7 +197,8 @@ def get_loader(split, args):
                             root_dir_3D=Cfg.root_dir_3D,
                             num_points=args.npoint,
                             semantic_level=args.data_type,
-                            n_compositions=args.n_comp)
+                            n_compositions=args.n_comp,
+                            split=split)
             .make_loader(batch_size=args.batch_size, num_workers=Cfg.num_workers)
         )
         return test_loader_2D_3D

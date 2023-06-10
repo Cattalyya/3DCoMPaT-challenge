@@ -42,7 +42,28 @@ class Submission:
             file.create_dataset('point_grouping',
                                         shape=(n_shapes, N_POINTS),
                                         dtype='uint8',
-                                        fillvalue=self.MAX_UINT8)
+                                        fillvalue=-1) # TODO(cattalyya): change default to self.MAX_UINT8 once support this prediction
+        # with h5py.File(outpath, 'w') as file:
+        #     file.create_dataset('shape_preds',
+        #                                 shape=(n_shapes),
+        #                                 dtype='uint8',
+        #                                 fillvalue=self.MAX_UINT8)
+        #     file.create_dataset('part_labels',
+        #                                 shape=(n_shapes, N_POINTS),
+        #                                 dtype='int16',
+        #                                 fillvalue=-1)
+        #     file.create_dataset('mat_labels',
+        #                                 shape=(n_shapes, N_POINTS),
+        #                                 dtype='uint8',
+        #                                 fillvalue=self.MAX_UINT8)
+        #     file.create_dataset('part_mat_pairs',
+        #                                 shape=(n_shapes, MAX_GROUPS, 2),
+        #                                 dtype='int16',
+        #                                 fillvalue=-1)
+        #     file.create_dataset('point_grouping',
+        #                                 shape=(n_shapes, N_POINTS),
+        #                                 dtype='uint8',
+        #                                 fillvalue=self.MAX_UINT8)
 
         self.visited = {cn: set() for cn in self.column_names}
     # sid = unique shape_id
@@ -72,7 +93,7 @@ class Submission:
 
     def sanity_check(self):
         column_checks = ["shape_preds", "part_labels", "mat_labels"]
-        NULLs = [self.MAX_UINT8, -1]
+        NULLs = [self.MAX_UINT8, -1, self.MAX_UINT8, -1, self.MAX_UINT8]
         assert len(self.visited[column_checks[0]]) == len(self.visited[column_checks[1]])
         with h5py.File(self.outpath, 'r') as file:
             for i, column_name in enumerate(column_checks):

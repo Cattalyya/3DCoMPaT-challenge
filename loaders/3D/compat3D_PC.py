@@ -207,7 +207,7 @@ class EvalLoader_PC(CompatLoader3D_PC):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, split="test", **kwargs)
+        super().__init__(*args, **kwargs)
 
     def __getitem__(self, item):
         idx = np.arange(self.num_points)
