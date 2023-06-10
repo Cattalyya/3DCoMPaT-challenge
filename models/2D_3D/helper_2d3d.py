@@ -50,7 +50,7 @@ def update_part_logits(saved_results, shape_ids, style_ids, fused_logits):
         saved_results[key] = accu_logits + fused_logits[i]
     return saved_results
 
-def update_predictions(shape_ids, style_ids, predicted_cls, predicted_parts, saved_cls_predictions, saved_part_predictions):
+def update_predictions(shape_ids, style_ids, predicted_cls, predicted_parts, predicted_mats, saved_cls_predictions, saved_part_predictions, saved_mat_predictions):
     style_ids = style_ids.cpu().data.numpy()
     for i, shape_id in enumerate(shape_ids):
         if shape_id in saved_cls_predictions:
@@ -58,7 +58,8 @@ def update_predictions(shape_ids, style_ids, predicted_cls, predicted_parts, sav
         key = (shape_id, style_ids[i])
         saved_cls_predictions[key] = predicted_cls[i]
         saved_part_predictions[key] = predicted_parts[i]
-    return saved_cls_predictions, saved_part_predictions
+        saved_mat_predictions[key] = predicted_mats[i]
+    return saved_cls_predictions, saved_part_predictions, saved_mat_predictions
 
 def get_fused_prediction(fused_logits, predicted3d):
     fused_prediction = logits_to_prediction(fused_logits)
@@ -77,9 +78,10 @@ def init_submission_file(filename, fieldname):
                                     shape=(N_TEST_SHAPES),
                                     dtype='uint8')
 
-def save_submission(submission, cls, parts, test_order_map):
+def save_submission(submission, cls, parts, mats, test_order_map):
     submission.update_batched('shape_preds', cls, test_order_map)
     submission.update_batched('part_labels', parts, test_order_map)
+    submission.update_batched('mat_labels', mats, test_order_map)
     # submission.update_batched('part_logits', parts_logits, test_order_map)
 
 # def update_submission(filename, column_name, predictions, test_order_map):

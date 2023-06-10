@@ -23,8 +23,11 @@ class PointNet2:
             metadata = json.load(open("/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/3D/metadata/coarse_seg_classes.json"))
         else:
             metadata = json.load(open("/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/3D/metadata/fine_seg_classes.json"))
+
+        metadata_mat = json.load(open("/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/3D/metadata/coarse_mat_seg_classes.json"))
         self.num_classes = metadata["num_classes"]
         self.num_part = metadata["num_part"]
+        self.num_mat = metadata_mat["num_mat"]
         self.seg_classes = metadata["seg_classes"]
         print("nclasses=", self.num_classes)
 
@@ -52,14 +55,14 @@ class PointNet2:
         self.partmodel.load_state_dict(part_ckpt["model_state_dict"])
 
         ##== 3. Load mat seg model
-        if mat_log_dir != "":
-            model_name = os.listdir(experiment_mat_dir + "/logs")[0].split(".")[0]
-            MODEL = importlib.import_module(model_name)
-            self.matmodel = MODEL.get_model(
-                self.num_part, shape_prior=shape_prior, normal_channel=args.normal
-            ).cuda()
-            part_ckpt = torch.load(str(experiment_mat_dir) + "/checkpoints/best_model.pth")
-            self.matmodel.load_state_dict(part_ckpt["model_state_dict"])
+        # if mat_log_dir != "":
+        model_name = os.listdir(experiment_mat_dir + "/logs")[0].split(".")[0]
+        MODEL = importlib.import_module(model_name)
+        self.matmodel = MODEL.get_model(
+            self.num_mat, shape_prior=shape_prior, normal_channel=args.normal
+        ).cuda()
+        mat_ckpt = torch.load(str(experiment_mat_dir) + "/checkpoints/best_model.pth")
+        self.matmodel.load_state_dict(mat_ckpt["model_state_dict"])
 
     def infer_part(self, points, label):
         points, label = (

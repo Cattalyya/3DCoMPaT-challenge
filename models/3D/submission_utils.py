@@ -71,7 +71,7 @@ class Submission:
                 self.visited[column_name].add(k_str)
 
     def sanity_check(self):
-        column_checks = ["shape_preds", "part_labels"]
+        column_checks = ["shape_preds", "part_labels", "mat_labels"]
         NULLs = [self.MAX_UINT8, -1]
         assert len(self.visited[column_checks[0]]) == len(self.visited[column_checks[1]])
         with h5py.File(self.outpath, 'r') as file:

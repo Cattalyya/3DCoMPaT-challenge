@@ -19,23 +19,42 @@ from transformers import SegformerConfig, SegformerForSemanticSegmentation
 
 
 class SegFormer2D:
-    def __init__(self, pretrain_path, args, num_labels):
+    def __init__(self, pretrain_part_path, pretrain_mat_path, args, num_part_labels, num_mat_labels):
         self.args = args
-
-        # Create an instance of SegformerForSemanticSegmentation
-        self.config = SegformerConfig()
-        self.config.num_labels = num_labels
-        self.model = SegformerForSemanticSegmentation(self.config)
-
-        self.model = nn.DataParallel(self.model)
-
-        self.model.load_state_dict(torch.load(pretrain_path))
-
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
+        
+        # Create an instance of SegformerForSemanticSegmentation
+        ## 1. Load pretrained part model
+        self.config_part = SegformerConfig()
+        self.config_part.num_labels = num_part_labels
+        self.partmodel = SegformerForSemanticSegmentation(self.config_part)
+        self.partmodel = nn.DataParallel(self.partmodel)
+        self.partmodel.load_state_dict(torch.load(pretrain_part_path))
+        self.partmodel.to(self.device)
 
-    def infer(self, images):
-        outputs = self.model(images.to(self.device))["logits"]
+        ## 2. Load pretrained mat model
+        self.config_mat = SegformerConfig()
+        self.config_mat.num_labels = num_mat_labels
+        self.matmodel = SegformerForSemanticSegmentation(self.config_mat)
+        self.matmodel = nn.DataParallel(self.matmodel)
+        self.matmodel.load_state_dict(torch.load(pretrain_mat_path))
+        self.matmodel.to(self.device)
+        
+
+    def infer_part(self, images):
+        outputs = self.partmodel(images.to(self.device))["logits"]
+        # Upsample the logits
+        # print(images.shape[-2:])
+        upsampled_logits = nn.functional.interpolate(
+            outputs, size=images.shape[-2:], mode="bicubic", align_corners=False
+        )
+        predicted = (
+            torch.softmax(upsampled_logits, dim=1).argmax(dim=1).cpu().numpy()
+        )
+        return outputs, upsampled_logits, predicted
+
+    def infer_mat(self, images):
+        outputs = self.matmodel(images.to(self.device))["logits"]
         # Upsample the logits
         # print(images.shape[-2:])
         upsampled_logits = nn.functional.interpolate(
