@@ -22,7 +22,7 @@ def pc_normalize(pc):
 
 
 def load_data(
-    hdf5_path, half_precision=False, normalize_points=False, is_test=False, is_rgb=False
+    hdf5_path, half_precision=False, normalize_points=False, is_test=False, is_rgb=False,
 ):
     """
     Pre-load and process the pointcloud data into memory.
@@ -47,12 +47,14 @@ def load_data(
 
         if normalize_points:
             norm_points = np.zeros((points.shape[0], points.shape[1], 3))
+            norm_rgb_points = np.zeros((points.shape[0], points.shape[1], 6))
             # TODO_BUG_REPORT(cattalyya): Report bug `points = np.zeros()` causes normalize to be all zeros.
             for i in range(points.shape[0]):
                 norm_points[i] = pc_normalize(points[i,:,:3])
+                norm_rgb_points[i] = pc_normalize(points[i,:,:6])
 
     # Alternative: return a list of tensors
-    ret_list = [norm_points if normalize_points else points, shape_ids]
+    ret_list = [norm_points if normalize_points else points, norm_rgb_points if normalize_points else points, shape_ids]
     if is_rgb:
         ret_list.append(style_ids)
 
@@ -109,6 +111,7 @@ class CompatLoader3D_PC(Dataset):
         )
         self.num_points = num_points
         self.points = self.hdf5_data[0]
+        self.rgb_points = self.hdf5_data[1]
         self.max_points = self.points.shape[1]
         self.transform = transform
         if self.num_points > self.max_points:
@@ -117,8 +120,8 @@ class CompatLoader3D_PC(Dataset):
             )
 
         # Loading shape_ids, style_ids
-        self.shape_ids = self.hdf5_data[1]
-        self.style_ids = self.hdf5_data[2]
+        self.shape_ids = self.hdf5_data[2]
+        self.style_ids = self.hdf5_data[3]
 
         # Converting all elements to strings from bytes
         self.shape_ids = [str(x, "utf-8") for x in self.shape_ids]
@@ -170,20 +173,21 @@ class StylizedShapeLoader_PC(CompatLoader3D_PC):
             idx = np.random.choice(self.max_points, self.num_points, True)
 
         points = torch.from_numpy(self.points[item][idx].astype(np.float32))
+        rgb_points = torch.from_numpy(self.rgb_points[item][idx].astype(np.float32))
 
         # Unwrapping the HDF5 data
         shape_id = self.shape_ids[item]
         style_id = self.style_ids[item]
-        shape_label = self.hdf5_data[3][item]
+        shape_label = self.hdf5_data[4][item]
 
         # Load the part labels
-        points_part_labels = self.hdf5_data[4]
+        points_part_labels = self.hdf5_data[5]
         points_part_labels = torch.from_numpy(
             points_part_labels[item][idx].astype(np.int16)
         )
 
         # Also load the material labels
-        points_mat_labels = self.hdf5_data[5]
+        points_mat_labels = self.hdf5_data[6]
         points_mat_labels = torch.from_numpy(
             points_mat_labels[item][idx].astype(np.uint8)
         )
@@ -193,6 +197,7 @@ class StylizedShapeLoader_PC(CompatLoader3D_PC):
             style_id,
             shape_label,
             points,
+            rgb_points,
             points_part_labels,
             points_mat_labels,
         )
@@ -218,12 +223,13 @@ class EvalLoader_PC(CompatLoader3D_PC):
         idx = np.arange(self.num_points)
 
         points = torch.from_numpy(self.points[item][idx].astype(np.float32))
+        rgb_points = torch.from_numpy(self.rgb_points[item][idx].astype(np.float32))
 
         # Unwrapping the HDF5 data
         shape_id = self.shape_ids[item]
         style_id = self.style_ids[item]
 
-        return shape_id, style_id, points
+        return shape_id, style_id, points, rgb_points
 
     def get_stylized_shape(self, shape_id, style_id):
         return super().get_stylized_shape(shape_id, style_id)

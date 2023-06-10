@@ -86,7 +86,6 @@ def save_submission(submission, cls, parts, mats, test_order_map):
         submission.update_batched('part_labels', parts, test_order_map)
     if mats != None:
         submission.update_batched('mat_labels', mats, test_order_map)
-    # submission.update_batched('part_logits', parts_logits, test_order_map)
 
 # def update_submission(filename, column_name, predictions, test_order_map):
 #     # Open the HDF5 file in 'a' (append) mode

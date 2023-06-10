@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+N_CH = 6 # 3= xyz, 6=xyzrgb
 
 def pc_normalize(pc):
     """
@@ -30,7 +31,7 @@ def load_data(data_dir, partition, seg_mode):
     with h5py.File(h5_name, "r") as f:
         print(f.keys())
         # points = np.array(f["points"][:]).astype("float32")
-        points = np.array(f["points"][:, :,:3]).astype("float32")
+        points = np.array(f["points"][:, :,:N_CH]).astype("float32")
         # points_labels = np.array(f["points_labels"][:]).astype("uint16")
         points_labels = None
         if partition != "test":
