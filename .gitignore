@@ -19,6 +19,10 @@ models/*/pretrain/
 models/*/*/pretrain/
 models/2D_3D/out_np/
 
+# Data
+*.hdf5
+*.zip
+
 # Distribution / packaging
 .Python
 env/

@@ -13,7 +13,7 @@ import torch.nn as nn
 import numpy as np
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../3D/')))
-from submission_utils import write_result
+from submission_utils import write_result, Submission
 import json
 
 sys.path.insert(0, os.path.abspath(
@@ -155,10 +155,13 @@ def main(argv=None):
     cls_log_dir = "2023-06-08_14-31"
     pointnet2 = PointNet2(part_log_dir, cls_log_dir, mat_log_dir, shape_prior, args)
 
-    saved_results = dict()
+    ##== 2. Setup Output
+    # init_predicted_files()
 
+    saved_results = dict()
     saved_part_predictions = dict()
     saved_cls_predictions = dict()
+
     # ======== Inference ========
     total_seen2d, total_seen3d, total_correct2d, total_correct3d, total_correct2d3d = 0.0, 0.0, 0, 0, 0
     total_correct2d_mat, total_correct3d_mat = 0, 0
@@ -230,11 +233,12 @@ def main(argv=None):
         # total_correct2d3d += correct2d3d
         total_seen3d += args.batch_size * args.npoint
         total_seen2d += args.batch_size * imsize * imsize
-
-    
-    np.savez("cls_predictions.npz", saved_cls_predictions)
-    np.savez("parts_predictions.npz", saved_part_predictions)
-    np.savez("parts_fused_logits.npz", saved_results)
+        if i % 50 == 0:
+            save_predictions_checkpoint(saved_cls_predictions, saved_part_predictions, saved_results, test_order)
+            saved_cls_predictions, saved_part_predictions, saved_results = dict(), dict(), dict()
+    # np.savez("cls_predictions.npz", saved_cls_predictions)
+    # np.savez("parts_predictions.npz", saved_part_predictions)
+    # np.savez("parts_fused_logits.npz", saved_results)
         # break
         # if i > 3:
         #     break
