@@ -1,7 +1,7 @@
 '''
 This script evaluates how well our predictions for cls, part seg and mat seg does for validation ds (with ground truth).
 
-TODO(cattalyya): DRY: Merge eval.py and predict.py or extract more common functions.
+TODO(cattalyya): REMOVE this since I already merge it to predict.py
 python eval.py  --data_type=coarse --n_comp=10 --batch_size=128
 '''
 import sys

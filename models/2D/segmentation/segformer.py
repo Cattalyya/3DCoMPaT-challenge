@@ -44,7 +44,6 @@ class SegFormer2D:
         predicted = (
             torch.softmax(upsampled_logits, dim=1).argmax(dim=1).cpu().numpy()
         )
-        predicted -= np.ones(predicted.shape, dtype=int)
         return outputs, upsampled_logits, predicted
 
 
