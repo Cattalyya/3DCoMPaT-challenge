@@ -109,14 +109,15 @@ def inference(model, gcr_loader, device, args):
 
     IMSIZE = 256
     predicted_all = np.empty((args.batch_size, IMSIZE, IMSIZE))
-    for  _model, images, _depth, _style, _view, _view_type, _cam  in tqdm(gcr_loader):
+    for  _shape_id, images, _depth, _style, _view, _view_type, _cam  in tqdm(gcr_loader):
+        print(_shape_id)
         assert images.shape[-2:][0] == IMSIZE
         with torch.no_grad():
-            predicted = model.infer(images)
+            predicted = model.infer_part(images)
             predicted_all = np.concatenate((predicted_all, predicted), axis=0)
     return predicted_all
 
-def evaluation(model, gcr_loader, args, num_labels):
+def evaluation(model, loader, args, num_labels):
 
     # Define the evaluation metric
     if not os.path.exists("./logs"):
@@ -140,7 +141,8 @@ def evaluation(model, gcr_loader, args, num_labels):
         # Torch array of predictions
         general_miou = []
         precisions = []
-        for images, _, y_parts, y_mats   in tqdm(gcr_loader):
+        # gcr loader
+        for images, _, y_parts, y_mats   in tqdm(loader):
             y = y_parts if args.task == "part" else y_mats
             with torch.no_grad():
                 outputs, predicted = model.infer(images.to(model.device))
@@ -157,7 +159,8 @@ def evaluation(model, gcr_loader, args, num_labels):
             f"mPrecision: {mPrecision:.6f}",
         )
     else: 
-        outputs, sementic_images = inference(model, gcr_loader, model.device, args)
+        # eval 2D loader
+        outputs, sementic_images = inference(model, loader, model.device, args)
 
 def main(argv=None):
     """
@@ -175,8 +178,9 @@ def main(argv=None):
 
 
     # Path to the pre-trained checkpoint
-    pretrain_path = '/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D/segmentation/pretrain/coarse_{}_best_model.pth'.format(args.task)
-    segformer = SegFormer2D(pretrain_path, args, num_labels)
+    pretrain_part_path = '/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D/segmentation/pretrain/coarse_part_best_model.pth'
+    pretrain_mat_path = '/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D/segmentation/pretrain/coarse_mat_best_model.pth'
+    segformer = SegFormer2D(pretrain_part_path, pretrain_mat_path, args, num_labels, MAT_CLASSES)
 
     loader = load_data(args)
     evaluation(segformer, loader, args, num_labels)
