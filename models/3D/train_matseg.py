@@ -125,14 +125,15 @@ def main(args):
     else:
         metadata = json.load(open("metadata/fine_seg_classes.json"))
 
-    num_classes = metadata["num_classes"]
-    num_part = metadata["num_part"]
-    seg_classes = metadata["seg_classes"]
+    metadata_mat = json.load(open("/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/3D/metadata/coarse_mat_seg_classes.json"))
+    num_classes = metadata_mat["num_classes"]
+    num_mat = metadata_mat["num_mat"]
+    # seg_classes = metadata["seg_classes"]
 
-    seg_label_to_cat = {}
-    for cat in seg_classes.keys():
-        for label in seg_classes[cat]:
-            seg_label_to_cat[label] = cat
+    # seg_label_to_cat = {}
+    # for cat in seg_classes.keys():
+    #     for label in seg_classes[cat]:
+    #         seg_label_to_cat[label] = cat
 
     # Model loading
     MODEL = importlib.import_module(args.model)
@@ -144,11 +145,11 @@ def main(args):
     log_string(shape_prior)
     if args.model == "curvenet_seg" or args.model == "pointmlp":
         classifier = MODEL.get_model(
-            num_part, shape_prior=shape_prior, npoints=args.npoint
+            num_mat, shape_prior=shape_prior, npoints=args.npoint
         ).cuda()
     else:
         classifier = MODEL.get_model(
-            num_part, shape_prior=shape_prior, normal_channel=args.normal
+            num_mat, shape_prior=shape_prior, normal_channel=args.normal
         ).cuda()
 
     criterion = MODEL.get_loss().cuda()
@@ -249,7 +250,7 @@ def main(args):
                     points, to_categorical(label, num_classes)
                 )
             else:                seg_pred, trans_feat = classifier(points)
-            seg_pred = seg_pred.contiguous().view(-1, num_part)
+            seg_pred = seg_pred.contiguous().view(-1, num_mat)
             target = target.view(-1, 1)[:, 0]
             pred_choice = seg_pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
@@ -265,10 +266,10 @@ def main(args):
             test_metrics = {}
             total_correct = 0
             total_seen = 0
-            total_seen_class = [0 for _ in range(num_part)]
-            total_correct_class = [0 for _ in range(num_part)]
-            shape_ious = {cat: [] for cat in seg_classes.keys()}
-            seg_label_to_cat = {}
+            total_seen_class = [0 for _ in range(num_mat)]
+            total_correct_class = [0 for _ in range(num_mat)]
+            # shape_ious = {cat: [] for cat in seg_classes.keys()}
+            # seg_label_to_cat = {}
             general_miou = []
 
             classifier = classifier.eval()
@@ -296,58 +297,58 @@ def main(args):
                 total_correct += correct
                 total_seen += cur_batch_size * NUM_POINT
 
-                for partk_k in range(num_part):
+                for partk_k in range(num_mat):
                     total_seen_class[partk_k] += np.sum(target == partk_k)
                     total_correct_class[partk_k] += np.sum(
                         (cur_pred_val == partk_k) & (target == partk_k)
                     )
 
                 # calculate the mIoU given shape prior knowledge and without it
-                miou = compute_overall_iou(cur_pred_val, target, num_part)
+                miou = compute_overall_iou(cur_pred_val, target, num_mat)
                 general_miou = general_miou + miou
-                for i in range(cur_batch_size):
-                    segp = cur_pred_val[i, :]
-                    segl = target[i, :]
-                    shape = str(label[i].item())
-                    part_ious = {}
-                    for shape_k in seg_classes[shape]:
-                        if (np.sum(segl == shape_k) == 0) and (
-                            np.sum(segp == shape_k) == 0
-                        ):  # part is not present, no prediction as well
-                            part_ious[shape_k] = 1.0
-                        else:
-                            part_ious[shape_k] = np.sum(
-                                (segl == shape_k) & (segp == shape_k)
-                            ) / float(np.sum((segl == shape_k) | (segp == shape_k)))
-                    # Convert the dictionary to a list
-                    part_ious = list(part_ious.values())
-                    shape_ious[shape].append(np.mean(part_ious))
-            all_shape_ious = []
-            for cat in shape_ious.keys():
-                for iou in shape_ious[cat]:
-                    all_shape_ious.append(iou)
-                shape_ious[cat] = np.mean(shape_ious[cat])
-            mean_shape_ious = np.mean(list(shape_ious.values()))
+                # for i in range(cur_batch_size):
+                #     segp = cur_pred_val[i, :]
+                #     segl = target[i, :]
+                #     shape = str(label[i].item())
+                #     part_ious = {}
+                #     for shape_k in seg_classes[shape]:
+                #         if (np.sum(segl == shape_k) == 0) and (
+                #             np.sum(segp == shape_k) == 0
+                #         ):  # part is not present, no prediction as well
+                #             part_ious[shape_k] = 1.0
+                #         else:
+                #             part_ious[shape_k] = np.sum(
+                #                 (segl == shape_k) & (segp == shape_k)
+                #             ) / float(np.sum((segl == shape_k) | (segp == shape_k)))
+                #     # Convert the dictionary to a list
+                #     part_ious = list(part_ious.values())
+            #         shape_ious[shape].append(np.mean(part_ious))
+            # all_shape_ious = []
+            # for cat in shape_ious.keys():
+            #     for iou in shape_ious[cat]:
+            #         all_shape_ious.append(iou)
+            #     shape_ious[cat] = np.mean(shape_ious[cat])
+            # mean_shape_ious = np.mean(list(shape_ious.values()))
             test_metrics["accuracy"] = total_correct / float(total_seen)
-            test_metrics["class_avg_accuracy"] = np.mean(
-                np.array(total_correct_class)
-                / np.array(total_seen_class, dtype=np.float)
-            )
+            # test_metrics["class_avg_accuracy"] = np.mean(
+            #     np.array(total_correct_class)
+            #     / np.array(total_seen_class, dtype=np.float)
+            # )
 
-            for cat in sorted(shape_ious.keys()):
-                log_string(
-                    "eval mIoU of %s %f"
-                    % (cat + " " * (14 - len(cat)), shape_ious[cat])
-                )
-            test_metrics["class_avg_iou"] = mean_shape_ious
-            test_metrics["inctance_avg_iou"] = np.mean(all_shape_ious)
+            # for cat in sorted(shape_ious.keys()):
+            #     log_string(
+            #         "eval mIoU of %s %f"
+            #         % (cat + " " * (14 - len(cat)), shape_ious[cat])
+            #     )
+            # test_metrics["class_avg_iou"] = mean_shape_ious
+            # test_metrics["inctance_avg_iou"] = np.mean(all_shape_ious)
             test_metrics["avg_iou_wihtout_shape"] = np.nanmean(general_miou)
 
         log_string(
-            "Epoch %d validation insta mIoU: %f "
-            % (epoch + 1, test_metrics["inctance_avg_iou"])
+            "Epoch %d validation insta acc: %f , miou_noshape %f"
+            % (epoch + 1, test_metrics["accuracy"], test_metrics["avg_iou_wihtout_shape"])
         )
-        if test_metrics["inctance_avg_iou"] >= best_inctance_avg_iou:
+        if test_metrics["accuracy"] >= best_acc:
             logger.info("Save model...")
             savepath = str(checkpoints_dir) + "/best_model.pth"
             log_string("Saving at %s" % savepath)
@@ -355,8 +356,8 @@ def main(args):
                 "epoch": epoch,
                 "train_acc": train_instance_acc,
                 "val_acc": test_metrics["accuracy"],
-                "class_avg_iou": test_metrics["class_avg_iou"],
-                "inctance_avg_iou": test_metrics["inctance_avg_iou"],
+                # "class_avg_iou": test_metrics["class_avg_iou"],
+                # "inctance_avg_iou": test_metrics["inctance_avg_iou"],
                 "avg_iou_wihtout_shape": test_metrics["avg_iou_wihtout_shape"],
                 "model_state_dict": classifier.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
@@ -364,15 +365,15 @@ def main(args):
             torch.save(state, savepath)
             log_string("Saving model....")
 
-        if test_metrics["inctance_avg_iou"] > best_inctance_avg_iou:
-            best_inctance_avg_iou = test_metrics["inctance_avg_iou"]
-            best_class_avg_iou = test_metrics["class_avg_iou"]
-            best_avg_iou_wihtout_shape = test_metrics["avg_iou_wihtout_shape"]
-            best_acc = test_metrics["accuracy"]
+        # if test_metrics["inctance_avg_iou"] > best_inctance_avg_iou:
+        #     best_inctance_avg_iou = test_metrics["inctance_avg_iou"]
+        #     best_class_avg_iou = test_metrics["class_avg_iou"]
+        #     best_avg_iou_wihtout_shape = test_metrics["avg_iou_wihtout_shape"]
+        #     best_acc = test_metrics["accuracy"]
 
         log_string("Best accuracy is: %.5f" % best_acc)
-        log_string("Best class avg mIOU is: %.5f" % best_class_avg_iou)
-        log_string("Best inctance avg mIOU is: %.5f" % best_inctance_avg_iou)
+        # log_string("Best class avg mIOU is: %.5f" % best_class_avg_iou)
+        # log_string("Best inctance avg mIOU is: %.5f" % best_inctance_avg_iou)
         log_string("Best general avg mIOU is: %.5f" % best_avg_iou_wihtout_shape)
         global_epoch += 1
 

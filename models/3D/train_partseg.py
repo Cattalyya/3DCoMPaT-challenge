@@ -104,7 +104,7 @@ def main(args):
         data_root=root, num_points=args.npoint, split="train", transform=None, seg_mode="part",
     )
     VAL_DATASET = CompatSeg(
-        data_root=root, num_points=args.npoint, split="valid", transform=None, seg_mode="part",-
+        data_root=root, num_points=args.npoint, split="valid", transform=None, seg_mode="part",
     )
 
     trainDataLoader = torch.utils.data.DataLoader(
