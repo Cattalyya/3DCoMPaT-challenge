@@ -14,7 +14,6 @@ sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../3D/')))
 from submission_utils import write_result, Submission
 import json
-
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../../loaders/2D_3D/')))
 from compat2D_3D import EvalLoader2D_3D, FullLoader2D_3D
@@ -145,7 +144,7 @@ def parse_args(argv):
 
     return args
 
-def inference(segformer, pointnet2, points, image, shape_id, style_id, cam_parameters, \
+def inference(segformer, pointnet2, points, rgb_points, image, shape_id, style_id, cam_parameters, \
               saved_cls_predictions, saved_part_predictions, saved_mat_predictions, \
               saved_part_fused_logits, saved_mat_fused_logits,\
               saved_part_each_logits, saved_mat_each_logits, args):
@@ -190,7 +189,7 @@ def inference(segformer, pointnet2, points, image, shape_id, style_id, cam_param
             ## ======= 3.2. Predict matseg 3D
             if not args.feature:
                 pointnet2.matmodel = pointnet2.matmodel.eval()
-                logits3d_mat, predicted3d_mat = pointnet2.infer_mat(points.cpu(), predicted_cls)
+                logits3d_mat, predicted3d_mat = pointnet2.infer_mat(rgb_points.cpu(), predicted_cls)
                 logits3d_mat = logits3d_mat.cpu()
                 predicted_mats = predicted3d_mat
             ## ======= 3.3. Fuse matseg 2D & 3D
@@ -270,7 +269,7 @@ def main(argv=None):
     ### ===== 2. Load 3D Model =======
     cls_log_dir = "2023-06-08_14-31"
     part_log_dir = "2023-06-04_05-57"
-    mat_log_dir = "2023-06-10_09-44"
+    mat_log_dir = "2023-06-10_09-20"
     pointnet2 = PointNet2(cls_log_dir, part_log_dir, mat_log_dir, shape_prior, args)
 
     # =============== Setup Output ===============
@@ -303,7 +302,8 @@ def main(argv=None):
             part_mask, mat_mask, depth, \
             style_id, view_id, view_type, \
             cam_parameters,\
-            points, points_part_labels, points_mat_labels = data_tuple
+            points, rgb_points, \
+            points_part_labels, points_mat_labels = data_tuple
 
             part_mask, points_part_labels, points_mat_labels = part_mask.cpu().data.numpy(), points_part_labels.cpu().data.numpy(), points_mat_labels.cpu().data.numpy() 
 
@@ -311,12 +311,12 @@ def main(argv=None):
             shape_id, image, depth, \
             style_id, view_id, view_type, \
             cam_parameters,\
-            points = data_tuple
+            points, rgb_points = data_tuple
         with torch.no_grad():
             predicted_cls, predicted, predicted3d, predicted_parts, predicted_mats,\
             saved_cls_predictions, saved_part_predictions, saved_mat_predictions, \
             saved_part_fused_logits, saved_mat_fused_logits, saved_part_each_logits, saved_mat_each_logits = \
-                inference(segformer, pointnet2, points, image, shape_id, style_id, cam_parameters, \
+                inference(segformer, pointnet2, points, rgb_points, image, shape_id, style_id, cam_parameters, \
                           saved_cls_predictions, saved_part_predictions, saved_mat_predictions, \
                           saved_part_fused_logits, saved_mat_fused_logits, saved_part_each_logits, saved_mat_each_logits, args)
         # ====== Compute evaluation 
@@ -328,7 +328,6 @@ def main(argv=None):
             correct_part_arr, correct_mat_arr = points_part_labels == predicted_parts, points_mat_labels == predicted_mats
             correct_both = np.sum(np.logical_and(correct_part_arr, correct_mat_arr))
             correct_cls = np.sum(shape_label.cpu().data.numpy() == predicted_cls)
-            # print(correct_mat, points_mat_labels.size, points_mat_labels.shape)
             total_seen2d += part_mask.size
             total_seen3d += points_part_labels.size
             total_seen_cls += shape_label.shape[0]
@@ -358,7 +357,7 @@ def main(argv=None):
                 save_features(featureFile, saved_part_each_logits, saved_mat_each_logits, key_order_map)
             # Clean up.
             saved_cls_predictions, saved_part_fused_logits, saved_mat_fused_logits, saved_part_each_logits, saved_mat_each_logits = dict(), dict(), dict(), dict(), dict()
-            saved_part_predictions, saved_mat_predictions = dict() if part_log_dir != "" else None, dict() if part_log_dir != "" else None
+            saved_part_predictions, saved_mat_predictions = dict() if part_log_dir != "" else None, dict() if mat_log_dir != "" else None
         if args.debug:
             break
     # ===== Save the last part of predictions to submission and perform sanity check.

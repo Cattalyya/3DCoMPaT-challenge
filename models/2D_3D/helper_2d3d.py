@@ -106,7 +106,6 @@ def save_submission(submission, cls, parts, mats, test_order_map):
         submission.update_batched('part_labels', parts, test_order_map)
     if mats != None:
         submission.update_batched('mat_labels', mats, test_order_map)
-    # submission.update_batched('part_logits', parts_logits, test_order_map)
 
 def save_features(featureFile, feature_parts, feature_mats, order_map):
     if feature_parts != None:

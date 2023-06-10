@@ -51,7 +51,7 @@ class PointNet2:
             model_name = os.listdir(experiment_parts_dir + "/logs")[0].split(".")[0]
             MODEL = importlib.import_module(model_name)
             self.partmodel = MODEL.get_model(
-                self.num_part, shape_prior=shape_prior, normal_channel=args.normal
+                self.num_part, shape_prior=shape_prior, normal_channel=args.normal, seg_mode="part"
             ).cuda()
             part_ckpt = torch.load(str(experiment_parts_dir) + "/checkpoints/best_model.pth")
             self.partmodel.load_state_dict(part_ckpt["model_state_dict"])
@@ -61,7 +61,7 @@ class PointNet2:
             model_name = os.listdir(experiment_mat_dir + "/logs")[0].split(".")[0]
             MODEL = importlib.import_module(model_name)
             self.matmodel = MODEL.get_model(
-                self.num_mat, shape_prior=shape_prior, normal_channel=args.normal
+                self.num_mat, shape_prior=shape_prior, normal_channel=args.normal, seg_mode="mat"
             ).cuda()
             mat_ckpt = torch.load(str(experiment_mat_dir) + "/checkpoints/best_model.pth")
             self.matmodel.load_state_dict(mat_ckpt["model_state_dict"])

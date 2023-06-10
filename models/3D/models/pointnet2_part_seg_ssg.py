@@ -7,18 +7,22 @@ import logging
 logger = logging.getLogger("Model")
 
 class get_model(nn.Module):
-    def __init__(self, num_classes, num_shapes=42, shape_prior=False, normal_channel=False):
+    def __init__(self, num_classes, num_shapes=42, shape_prior=False, normal_channel=False, seg_mode="part"):
         super(get_model, self).__init__()
+        N_CH = 6 if seg_mode == "mat" else 3
+        N_CH_EXTRA_COLOR = 6 if N_CH == 6 else 0
         if normal_channel:
-            additional_channel = 3
+            additional_channel = 3 + N_CH_EXTRA_COLOR
         else:
-            additional_channel = 0
+            additional_channel = 0 + N_CH_EXTRA_COLOR
         self.normal_channel = normal_channel
         self.num_shapes = num_shapes
         self.shape_prior = shape_prior
+        C_ = N_CH
+        # Set abstraction
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=6+additional_channel, mlp=[64, 64, 128], group_all=False)
-        self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
-        self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
+        self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + C_, mlp=[128, 128, 256], group_all=False)
+        self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + C_, mlp=[256, 512, 1024], group_all=True)
         self.fp3 = PointNetFeaturePropagation(in_channel=1280, mlp=[256, 256])
         self.fp2 = PointNetFeaturePropagation(in_channel=384, mlp=[256, 128])
         self.fp1 = PointNetFeaturePropagation(in_channel=128+6+additional_channel+(num_shapes if shape_prior else 0), 
@@ -34,7 +38,7 @@ class get_model(nn.Module):
         B,C,N = xyz.shape
         if self.normal_channel:
             l0_points = xyz
-            l0_xyz = xyz[:,:3,:]
+            l0_xyz = xyz[:,:N_CH,:]
         else:
             l0_points = xyz
             l0_xyz = xyz

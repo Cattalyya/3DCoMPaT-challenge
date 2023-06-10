@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../3D/')))
 from compat3D_PC import EvalLoader_PC, StylizedShapeLoader_PC
 
+N_CH = 6 
 
 def fetch_3D_PC(loader_3D, style_id_idx, test_mode, loader_2D):
     """
@@ -28,13 +29,14 @@ def fetch_3D_PC(loader_3D, style_id_idx, test_mode, loader_2D):
         if not test_mode:
             (
                 points,
+                rgb_points,
                 points_part_labels,
                 points_mat_labels,
             ) = loader_3D.get_stylized_shape(shape_id, style_id)[-3:]
-            tuple_3D = [points, points_part_labels, points_mat_labels]
+            tuple_3D = [points, rgb_points, points_part_labels, points_mat_labels]
         else:
-            points = loader_3D.get_stylized_shape(shape_id, style_id)[-1]
-            tuple_3D = [points]
+            points, rgb_points = loader_3D.get_stylized_shape(shape_id, style_id)[-2]
+            tuple_3D = [points, rgb_points]
         yield list(tuple_2D) + tuple_3D
 
 # `fetch_3D_PC()` loads 2D in batch but load only a single 3D object, so
@@ -55,25 +57,27 @@ def fetch_3D_PC_batch(loader_3D, style_id_idx, test_mode, loader_2D):
                 (
                     # shape_label, # int because one object only has 1 shape
                     points,
+                    rgb_points,
                     points_part_labels,
                     points_mat_labels,
                 ) = loader_3D.get_stylized_shape(shape_ids[i], style_ids[i])[3:]
 
                 if tuple_3D == None:
                     # TODO(cattalyya): Train 3D dataset with RGB
-                    tuple_3D = [points[:,:3].unsqueeze(0), points_part_labels.unsqueeze(0), points_mat_labels.unsqueeze(0)]#, torch.tensor([shape_label])]
+                    tuple_3D = [points[:,:3].unsqueeze(0), rgb_points[:,:6].unsqueeze(0), points_part_labels.unsqueeze(0), points_mat_labels.unsqueeze(0)]#, torch.tensor([shape_label])]
                 else:
                     tuple_3D[0] = torch.cat((tuple_3D[0], points[:,:3].unsqueeze(0)), dim=0)
-                    tuple_3D[1] = torch.cat((tuple_3D[1], points_part_labels.unsqueeze(0)), dim=0)
-                    tuple_3D[2] = torch.cat((tuple_3D[2], points_mat_labels.unsqueeze(0)), dim=0)
-                    # tuple_3D[3] = torch.cat((tuple_3D[3], torch.tensor([shape_label])), dim=0)
+                    tuple_3D[1] = torch.cat((tuple_3D[1], rgb_points[:,:6].unsqueeze(0)), dim=0)
+                    tuple_3D[2] = torch.cat((tuple_3D[2], points_part_labels.unsqueeze(0)), dim=0)
+                    tuple_3D[3] = torch.cat((tuple_3D[3], points_mat_labels.unsqueeze(0)), dim=0)
         else:
             for i in range(batch_size):
                 points = loader_3D.get_stylized_shape(shape_ids[i], style_ids[i])[-1]
                 if tuple_3D == None:
-                    tuple_3D = [points[:,:3].unsqueeze(0)]
+                    tuple_3D = [points[:,:3].unsqueeze(0), rgb_points[:,:6].unsqueeze(0)]
                 else:
                     tuple_3D[0] = torch.cat((tuple_3D[0], points[:,:3].unsqueeze(0)), dim=0)
+                    tuple_3D[1] = torch.cat((tuple_3D[1], rgb_points[:,:6].unsqueeze(0)), dim=0)
         yield list(tuple_2D) + tuple_3D
 
 class FullLoader2D_3D(FullLoader):

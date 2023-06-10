@@ -145,11 +145,11 @@ def main(args):
     log_string(shape_prior)
     if args.model == "curvenet_seg" or args.model == "pointmlp":
         classifier = MODEL.get_model(
-            num_mat, shape_prior=shape_prior, npoints=args.npoint
+            num_mat, shape_prior=shape_prior, npoints=args.npoint, seg_mode="mat"
         ).cuda()
     else:
         classifier = MODEL.get_model(
-            num_mat, shape_prior=shape_prior, normal_channel=args.normal
+            num_mat, shape_prior=shape_prior, normal_channel=args.normal, seg_mode="mat"
         ).cuda()
 
     criterion = MODEL.get_loss().cuda()
@@ -362,14 +362,14 @@ def main(args):
                 "model_state_dict": classifier.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
             }
+            best_avg_iou_wihtout_shape = test_metrics["avg_iou_wihtout_shape"]
+            best_acc = test_metrics["accuracy"]
             torch.save(state, savepath)
             log_string("Saving model....")
 
         # if test_metrics["inctance_avg_iou"] > best_inctance_avg_iou:
         #     best_inctance_avg_iou = test_metrics["inctance_avg_iou"]
         #     best_class_avg_iou = test_metrics["class_avg_iou"]
-        #     best_avg_iou_wihtout_shape = test_metrics["avg_iou_wihtout_shape"]
-        #     best_acc = test_metrics["accuracy"]
 
         log_string("Best accuracy is: %.5f" % best_acc)
         # log_string("Best class avg mIOU is: %.5f" % best_class_avg_iou)
