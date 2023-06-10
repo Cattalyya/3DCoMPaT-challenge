@@ -64,11 +64,11 @@ class Submission:
     def update_batched(self, column_name, batched_preds, test_order_map):
         with h5py.File(self.outpath, 'a') as file:
             for key, val in batched_preds.items():
-                k_str = "{}_{}".format(key[0], key[1])
-                index = test_order_map[k_str]
+                index = test_order_map[key]
                 file[column_name][index] = val
-                assert k_str not in self.visited[column_name]
-                self.visited[column_name].add(k_str)
+                assert key not in self.visited[column_name], \
+                    "Error saving column={} submission: Key {} already existed in {}".format(column_name, key, self.visited[column_name])
+                self.visited[column_name].add(key)
 
     def sanity_check(self):
         column_checks = ["shape_preds", "part_labels", "mat_labels"]

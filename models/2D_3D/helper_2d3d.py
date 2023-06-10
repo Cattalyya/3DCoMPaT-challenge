@@ -45,7 +45,7 @@ def get_key(sid, stid):
 def update_part_logits(saved_results, shape_ids, style_ids, fused_logits):
     style_ids = style_ids.cpu().data.numpy()
     for i, shape_id in enumerate(shape_ids):
-        key = (shape_id, style_ids[i])
+        key = get_key(shape_id, style_ids[i])
         accu_logits = saved_results.get(key, torch.zeros((fused_logits.shape)).cpu())
         saved_results[key] = accu_logits + fused_logits[i]
     return saved_results
@@ -55,7 +55,7 @@ def update_predictions(shape_ids, style_ids, predicted_cls, predicted_parts, pre
     for i, shape_id in enumerate(shape_ids):
         if shape_id in saved_cls_predictions:
             continue
-        key = (shape_id, style_ids[i])
+        key = get_key(shape_id, style_ids[i])
         saved_cls_predictions[key] = predicted_cls[i]
         saved_part_predictions[key] = predicted_parts[i]
         saved_mat_predictions[key] = predicted_mats[i]
