@@ -164,7 +164,7 @@ def inference(segformer, pointnet2, points, rgb_points, image, shape_id, style_i
             ## ======= 2.2. Predict partseg 3D
             if not args.feature:
                 pointnet2.partmodel = pointnet2.partmodel.eval()
-                logits3d, predicted3d = pointnet2.infer_part(points.cpu(), predicted_cls) # TODO(cattalyya): change back to point3D or support 6D with flag.
+                logits3d, predicted3d = pointnet2.infer_part(rgb_points.cpu(), predicted_cls) # TODO(cattalyya): change back to point3D or support 6D with flag.
                 logits3d =  logits3d.cpu()
                 predicted_parts = predicted3d
             ## ======= 2.3. Fuse partseg 2D & 3D
@@ -268,7 +268,7 @@ def main(argv=None):
     segformer = SegFormer2D(segformer_part_pretrain_path, segformer_mat_pretrain_path, args, Cfg.PART_CLASSES, Cfg.MAT_CLASSES)
     ### ===== 2. Load 3D Model =======
     cls_log_dir = "2023-06-08_14-31"
-    part_log_dir = "2023-06-04_05-57"
+    part_log_dir = "2023-06-11_13-33" #"2023-06-04_05-57"
     mat_log_dir = "2023-06-10_09-20"
     pointnet2 = PointNet2(cls_log_dir, part_log_dir, mat_log_dir, shape_prior, args)
 

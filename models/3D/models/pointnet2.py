@@ -51,12 +51,12 @@ class PointNet2:
             model_name = os.listdir(experiment_parts_dir + "/logs")[0].split(".")[0]
             MODEL = importlib.import_module(model_name)
             self.partmodel = MODEL.get_model(
-                self.num_part, shape_prior=shape_prior, normal_channel=args.normal, seg_mode="part"
+                self.num_part, shape_prior=shape_prior, normal_channel=args.normal, seg_mode="mat" # TODO(cattalyya): change back to part and enable 6D on part.
             ).cuda()
             part_ckpt = torch.load(str(experiment_parts_dir) + "/checkpoints/best_model.pth")
             self.partmodel.load_state_dict(part_ckpt["model_state_dict"])
 
-        ##== 3. Load mat seg model
+        ##== 4. Load mat seg model
         if mat_log_dir != "":
             model_name = os.listdir(experiment_mat_dir + "/logs")[0].split(".")[0]
             MODEL = importlib.import_module(model_name)
