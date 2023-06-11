@@ -159,7 +159,7 @@ def inference(segformer, pointnet2, points, image, shape_id, style_id, cam_param
             outputs, logits, predicted = segformer.infer_part(image)
             ## ======= 2.2. Predict partseg 3D
             pointnet2.partmodel = pointnet2.partmodel.eval()
-            logits3d, predicted3d = pointnet2.infer_part(points.cpu(), predicted_cls)
+            logits3d, predicted3d = pointnet2.infer_part(points.cpu(), predicted_cls) # TODO(cattalyya): change back to point3D or support 6D with flag.
             logits3d =  logits3d.cpu()
             predicted_parts = predicted3d
             ## ======= 2.3. Fuse partseg 2D & 3D
@@ -274,7 +274,7 @@ def main(argv=None):
 
     # =============== Inference ===============
     total_seen_cls, total_seen2d, total_seen3d = 0.0, 0.0, 0.0
-    total_correct_cls, total_correct2d, total_correct3d, total_correct_fuse, total_correct_mat =  0, 0, 0, 0, 0
+    total_correct_cls, total_correct2d, total_correct3d, total_correct_fuse, total_correct_mat, total_correct_both =  0, 0, 0, 0, 0, 0
     cnt = 0
     keys = set()
     for i, data_tuple in tqdm(enumerate(loader_2D_3D)):
@@ -305,6 +305,8 @@ def main(argv=None):
             correct2d = np.sum(part_mask == predicted)
             correct_fuse = np.sum(points_part_labels == predicted_parts)
             correct_mat = np.sum(points_mat_labels == predicted_mats)
+            correct_part_arr, correct_mat_arr = points_part_labels == predicted_parts, points_mat_labels == predicted_mats
+            correct_both = np.sum(np.logical_and(correct_part_arr, correct_mat_arr))
             correct_cls = np.sum(shape_label.cpu().data.numpy() == predicted_cls)
             # print(correct_mat, points_mat_labels.size, points_mat_labels.shape)
             total_seen2d += part_mask.size
@@ -315,16 +317,21 @@ def main(argv=None):
             total_correct_fuse += correct_fuse
             total_correct_mat += correct_mat
             total_correct_cls += correct_cls
+            total_correct_both += correct_both
             if i % 50 == 0:
-                print("------>>> ", shape_id, image.shape)
+                print("------>>> One batch accuracy ")
                 print("Cls Accuracy: {}/{} = {}".format(correct_cls, predicted_cls.shape[0], float(correct_cls)/predicted_cls.shape[0]))
                 print("Part Accuracy: 2D: {}\t3D: {}\tFuse: {}".format(correct2d/part_mask.size * 100, correct3d/points_part_labels.size * 100, correct_fuse/points_part_labels.size * 100 if args.fusepart else "Disabled"))
                 print("Mat Accuracy: {}/{} = {}".format(correct_mat, points_part_labels.size, correct_mat/points_part_labels.size * 100))
+                print("Both Accuracy: {}/{} = {}".format(correct_both, points_part_labels.size, correct_both/points_part_labels.size * 100))
     
         ## ======= Result Checkpoint 
         if i % 50 == 0:
             ## ====== Save prediction to avoid RAM explode (actually explode 200GB @260 iters)
-            print("Cls: {}\tPart: {}\tMat: {}".format(predicted_cls[0], predicted_parts[0] if part_log_dir != "" else "Disabled", predicted_mats[0] if mat_log_dir != "" else "Disabled"))
+            print("Example Prediction of {}_{}: Cls: {}\tPart: {} (Expect: {})\tMat: {} (Expect: {})".format(\
+                    shape_id[0], style_id[0], predicted_cls[0],  \
+                    predicted_parts[0] if part_log_dir != "" else "Disabled", points_part_labels[0] if gt_available_mode else "N/A", \
+                    predicted_mats[0] if mat_log_dir != "" else "Disabled", points_mat_labels[0] if gt_available_mode else "N/A"))
             save_submission(submission, saved_cls_predictions, saved_part_predictions, saved_mat_predictions, key_order_map)
             # Clean up.
             saved_cls_predictions, saved_part_fused_logits, saved_mat_fused_logits = dict(), dict(), dict()
@@ -341,6 +348,8 @@ def main(argv=None):
         print("Cls Accuracy: {}/{}={}".format(total_correct_cls, total_seen_cls, float(total_correct_cls)/total_seen_cls))
         print("Part Accuracy: 2D: {}\t3D: {}\tFuse: {}".format(total_correct2d/total_seen2d * 100, total_correct3d/total_seen3d * 100, total_correct_fuse/total_seen3d * 100 if args.fusepart else "Disabled"))
         print("Mat Accuracy: {}".format(total_correct_mat/total_seen3d * 100))
+        print("Both Accuracy: {}/{} = {}".format(total_correct_both, total_seen3d, total_correct_both/total_seen3d * 100))
+    
 if __name__ == "__main__":
     main()
 
