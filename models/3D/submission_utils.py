@@ -86,20 +86,30 @@ class Submission:
         with h5py.File(self.outpath, 'a') as file:
             for key, val in batched_preds.items():
                 index = test_order_map[key]
+                # print(index, end=" "),
                 file[column_name][index] = val
                 assert key not in self.visited[column_name], \
                     "Error saving column={} submission: Key {} already existed in {}".format(column_name, key, self.visited[column_name])
                 self.visited[column_name].add(key)
 
-    def sanity_check(self):
+    def sanity_check(self, column_logs, split):
         column_checks = ["shape_preds", "part_labels", "mat_labels"]
         NULLs = [self.MAX_UINT8, -1, self.MAX_UINT8, -1, self.MAX_UINT8]
-        assert len(self.visited[column_checks[0]]) == len(self.visited[column_checks[1]])
+        EXPECT_SIZE = 12560 if split == "test" else 6770
+        # assert len(self.visited[column_checks[0]]) == len(self.visited[column_checks[1]])
         with h5py.File(self.outpath, 'r') as file:
             for i, column_name in enumerate(column_checks):
+                if column_logs[i] == "":
+                    continue
                 column_data = file[column_name]
                 assert ~np.isin(NULLs[i], column_data), \
-                    "Column {} contains null ({}) data: {}".format(column_name, NULLs[i], np.unique(column_data))
+                    "Column {} contains null ({}) data: {}. An example null-value key is {}. Data={}".format(\
+                        column_name, NULLs[i], np.unique(column_data),\
+                        np.where(column_data==NULLs[i]), [s for s in column_data])
+
+                assert len(self.visited[column_name]) == EXPECT_SIZE, \
+                    "Predicted result of column {} {} does NOT equal to expected ds size {}".format( \
+                    column_name, len(self.visited[column_names]), EXPECT_SIZE)
         print("[INFO] Pass submission sanity check!")
 
     def write_file(self, checked_sids=None):

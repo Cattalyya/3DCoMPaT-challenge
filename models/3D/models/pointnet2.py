@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.abspath(
 from compat_utils import compute_overall_iou, to_categorical
 
 class PointNet2:
-    def __init__(self, part_log_dir, cls_log_dir, mat_log_dir, shape_prior, args):
+    def __init__(self, cls_log_dir, part_log_dir, mat_log_dir, shape_prior, args):
         ##== 1. Setup
         self.shape_prior = shape_prior
         if args.data_type == "coarse":
@@ -37,32 +37,34 @@ class PointNet2:
         experiment_mat_dir = "/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/3D/log/mat_seg/" + mat_log_dir
         
         ##== 2. Load cls model 
-        model_name = os.listdir(experiment_cls_dir + "/logs")[0].split(".")[0]
-        MODEL = importlib.import_module(model_name)
-        self.clsmodel = MODEL.get_model(
-            self.num_classes, normal_channel=args.normal
-        ).cuda()
-        cls_ckpt = torch.load(str(experiment_cls_dir) + "/checkpoints/best_model.pth")
-        self.clsmodel.load_state_dict(cls_ckpt["model_state_dict"])
+        if cls_log_dir != "":
+            model_name = os.listdir(experiment_cls_dir + "/logs")[0].split(".")[0]
+            MODEL = importlib.import_module(model_name)
+            self.clsmodel = MODEL.get_model(
+                self.num_classes, normal_channel=args.normal
+            ).cuda()
+            cls_ckpt = torch.load(str(experiment_cls_dir) + "/checkpoints/best_model.pth")
+            self.clsmodel.load_state_dict(cls_ckpt["model_state_dict"])
 
         ##== 3. Load parts seg model
-        model_name = os.listdir(experiment_parts_dir + "/logs")[0].split(".")[0]
-        MODEL = importlib.import_module(model_name)
-        self.partmodel = MODEL.get_model(
-            self.num_part, shape_prior=shape_prior, normal_channel=args.normal
-        ).cuda()
-        part_ckpt = torch.load(str(experiment_parts_dir) + "/checkpoints/best_model.pth")
-        self.partmodel.load_state_dict(part_ckpt["model_state_dict"])
+        if part_log_dir != "":
+            model_name = os.listdir(experiment_parts_dir + "/logs")[0].split(".")[0]
+            MODEL = importlib.import_module(model_name)
+            self.partmodel = MODEL.get_model(
+                self.num_part, shape_prior=shape_prior, normal_channel=args.normal
+            ).cuda()
+            part_ckpt = torch.load(str(experiment_parts_dir) + "/checkpoints/best_model.pth")
+            self.partmodel.load_state_dict(part_ckpt["model_state_dict"])
 
         ##== 3. Load mat seg model
-        # if mat_log_dir != "":
-        model_name = os.listdir(experiment_mat_dir + "/logs")[0].split(".")[0]
-        MODEL = importlib.import_module(model_name)
-        self.matmodel = MODEL.get_model(
-            self.num_mat, shape_prior=shape_prior, normal_channel=args.normal
-        ).cuda()
-        mat_ckpt = torch.load(str(experiment_mat_dir) + "/checkpoints/best_model.pth")
-        self.matmodel.load_state_dict(mat_ckpt["model_state_dict"])
+        if mat_log_dir != "":
+            model_name = os.listdir(experiment_mat_dir + "/logs")[0].split(".")[0]
+            MODEL = importlib.import_module(model_name)
+            self.matmodel = MODEL.get_model(
+                self.num_mat, shape_prior=shape_prior, normal_channel=args.normal
+            ).cuda()
+            mat_ckpt = torch.load(str(experiment_mat_dir) + "/checkpoints/best_model.pth")
+            self.matmodel.load_state_dict(mat_ckpt["model_state_dict"])
 
     def infer_part(self, points, label):
         points, label = (
