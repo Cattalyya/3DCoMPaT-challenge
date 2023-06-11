@@ -72,7 +72,7 @@ def fetch_3D_PC_batch(loader_3D, style_id_idx, test_mode, loader_2D):
                     tuple_3D[3] = torch.cat((tuple_3D[3], points_mat_labels.unsqueeze(0)), dim=0)
         else:
             for i in range(batch_size):
-                points = loader_3D.get_stylized_shape(shape_ids[i], style_ids[i])[-1]
+                points, rgb_points = loader_3D.get_stylized_shape(shape_ids[i], style_ids[i])[2:]
                 if tuple_3D == None:
                     tuple_3D = [points[:,:3].unsqueeze(0), rgb_points[:,:6].unsqueeze(0)]
                 else:

@@ -144,11 +144,11 @@ def main(args):
     log_string(shape_prior)
     if args.model == "curvenet_seg" or args.model == "pointmlp":
         classifier = MODEL.get_model(
-            num_part, shape_prior=shape_prior, npoints=args.npoint
+            num_part, shape_prior=shape_prior, npoints=args.npoint, seg_mode="mat"
         ).cuda()
     else:
         classifier = MODEL.get_model(
-            num_part, shape_prior=shape_prior, normal_channel=args.normal
+            num_part, shape_prior=shape_prior, normal_channel=args.normal, seg_mode="mat"
         ).cuda()
 
     criterion = MODEL.get_loss().cuda()
