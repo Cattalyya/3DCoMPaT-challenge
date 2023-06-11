@@ -10,23 +10,24 @@ import numpy as np
 N_POINTS = 2048
 MAX_GROUPS = 30
 DEFAULT_OUTFILE = "/home/ubuntu/3dcompat/workspace/submission/parts_fused_pred_test.hdf5"
-        
+
 def open_hdf5(hdf5_file, mode):
     hdf5_f = h5py.File(hdf5_file, mode)
     return hdf5_f
-
+# active_columns = [True, True, False, False, False]
 class Submission:
-    def __init__(self, n_shapes, outpath=DEFAULT_OUTFILE):
+    def __init__(self, n_shapes, active_columns, outpath=DEFAULT_OUTFILE):
         # Creating the selected split
         self.n_shapes = n_shapes
         self.outpath = outpath
         self.MAX_UINT8 = 255
         self.column_names = ["shape_preds", "part_labels", "mat_labels", "part_mat_pairs", "point_grouping"]
+        self.active_columns = active_columns
         with h5py.File(outpath, 'w') as file:
             file.create_dataset('shape_preds',
                                         shape=(n_shapes),
                                         dtype='uint8',
-                                        fillvalue=self.MAX_UINT8)
+                                        fillvalue=self.MAX_UINT8 if self.active_columns[0] else -1)
             file.create_dataset('part_labels',
                                         shape=(n_shapes, N_POINTS),
                                         dtype='int16',
@@ -34,7 +35,7 @@ class Submission:
             file.create_dataset('mat_labels',
                                         shape=(n_shapes, N_POINTS),
                                         dtype='uint8',
-                                        fillvalue=self.MAX_UINT8)
+                                        fillvalue=self.MAX_UINT8 if self.active_columns[2] else -1)
             file.create_dataset('part_mat_pairs',
                                         shape=(n_shapes, MAX_GROUPS, 2),
                                         dtype='int16',
@@ -42,7 +43,7 @@ class Submission:
             file.create_dataset('point_grouping',
                                         shape=(n_shapes, N_POINTS),
                                         dtype='uint8',
-                                        fillvalue=-1) # TODO(cattalyya): change default to self.MAX_UINT8 once support this prediction
+                                        fillvalue=self.MAX_UINT8 if self.active_columns[4] else -1) # TODO(cattalyya): change default to self.MAX_UINT8 once support this prediction
         # with h5py.File(outpath, 'w') as file:
         #     file.create_dataset('shape_preds',
         #                                 shape=(n_shapes),
@@ -86,20 +87,18 @@ class Submission:
         with h5py.File(self.outpath, 'a') as file:
             for key, val in batched_preds.items():
                 index = test_order_map[key]
-                # print(index, end=" "),
                 file[column_name][index] = val
                 assert key not in self.visited[column_name], \
                     "Error saving column={} submission: Key {} already existed in {}".format(column_name, key, self.visited[column_name])
                 self.visited[column_name].add(key)
 
     def sanity_check(self, column_logs, split):
-        column_checks = ["shape_preds", "part_labels", "mat_labels"]
         NULLs = [self.MAX_UINT8, -1, self.MAX_UINT8, -1, self.MAX_UINT8]
         EXPECT_SIZE = 12560 if split == "test" else 6770
-        # assert len(self.visited[column_checks[0]]) == len(self.visited[column_checks[1]])
+        # assert len(self.visited[ACTIVE_PREDICTIONS[0]]) == len(self.visited[ACTIVE_PREDICTIONS[1]])
         with h5py.File(self.outpath, 'r') as file:
-            for i, column_name in enumerate(column_checks):
-                if column_logs[i] == "":
+            for i, column_name in enumerate(self.column_names):
+                if not self.active_columns[i]:
                     continue
                 column_data = file[column_name]
                 assert ~np.isin(NULLs[i], column_data), \
@@ -127,7 +126,7 @@ def write_result(shape_preds):
 	print("Writing result for {} shapes...".format(n_shapes))
 
 	# If the file exists, open it instead
-	hdf5_name = "/home/ubuntu/3dcompat/workspace/submission/shape_preds_zeropads.hdf5"
+	hdf5_name = "./submit_from_infercls.hdf5"
 	#get_hdf5_name(hdf5_dir, hdf5_name="my_submission")
 
 	# Creating the selected split

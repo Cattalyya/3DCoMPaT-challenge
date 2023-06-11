@@ -108,6 +108,7 @@ class FullLoader2D_3D(FullLoader):
         pc_transform=None,
         pc_half_precision=False,
         normalize_points=False,
+        random=True,
         **kwargs,
     ):
         # Raise error if n_compositions > 10
@@ -130,6 +131,7 @@ class FullLoader2D_3D(FullLoader):
             half_precision=pc_half_precision,
             normalize_points=normalize_points,
             is_rgb=True,
+            random=random,
         )
 
         self.fetch_3D = partial(fetch_3D_PC_batch, self.loader_3D, 6, False)
@@ -174,6 +176,7 @@ class EvalLoader2D_3D(EvalLoader):
         pc_transform=None,
         pc_half_precision=False,
         normalize_points=False,
+        random=True,
         **kwargs,
     ):
         # Raise error if n_compositions > 10
@@ -195,6 +198,7 @@ class EvalLoader2D_3D(EvalLoader):
             transform=pc_transform,
             half_precision=pc_half_precision,
             normalize_points=normalize_points,
+            random=random,
             is_rgb=True,
         )
         self.fetch_3D = partial(fetch_3D_PC_batch, self.loader_3D, 3, True)

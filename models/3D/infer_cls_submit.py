@@ -1,5 +1,6 @@
 """
 Evaluate 3D shape classification.
+python infer_cls_submit.py --batch_size=128 --num_point=2048 --data_name=coarse --log_dir=2023-06-08_14-31
 """
 import argparse
 import importlib
@@ -67,8 +68,9 @@ def inference(model, loader, num_class=40, vote_num=1, batch_size=24):
     if not args.use_cpu:
         predictions = torch.zeros(len(loader) * batch_size).cuda()
 
-
-    for i, (points, target) in tqdm(enumerate(loader), total=len(loader)):
+#pointcloud, label, seg, shape_id
+    for i, (points, target, seg, shape_id) in tqdm(enumerate(loader), total=len(loader)):
+        print(shape_id[0], points[0])
         if not args.use_cpu:
             points, target = points.cuda(), target.cuda()
 

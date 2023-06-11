@@ -120,7 +120,7 @@ def save_predictions(filename, predictions, st_id):
     # Open the HDF5 file in 'a' (append) mode
     with h5py.File(filename, 'a') as file:
         for key, val in predictions.items():
-            print(k_str)
-            file[k_str] = val
+            # print(k_str)
+            file[k_str] = val.cpu().data.numpy()
 
 

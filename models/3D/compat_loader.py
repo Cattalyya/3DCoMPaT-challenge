@@ -132,18 +132,19 @@ class CompatLoader3DCls(CompatLoader3D):
         super().__init__(data_root, split, num_points, transform, seg_mode, random)
 
     def __getitem__(self, item):
-        # print(item)
-        idx = range(len(self.data[item]))
-        if self.random:
-            idx = np.random.choice(self.num_points, self.num_points, False)
-        pointcloud = self.data[item][idx].astype(np.float32)
-        label = None
+        return super().__getitem__(item)
+        # # print(item)
+        # idx = range(len(self.data[item]))
+        # if self.random:
+        #     idx = np.random.choice(self.num_points, self.num_points, False)
+        # pointcloud = self.data[item][idx].astype(np.float32)
+        # label = None
 
-        pointcloud = torch.from_numpy(pointcloud)
-        if self.partition == "test":
-            return pointcloud
+        # pointcloud = torch.from_numpy(pointcloud)
+        # if self.partition == "test":
+        #     return pointcloud
 
-        label = self.label[item]
-        # seg = self.seg[item][idx].astype(np.int32)
-        # seg = torch.from_numpy(seg)
-        return pointcloud, label
+        # label = self.label[item]
+        # # seg = self.seg[item][idx].astype(np.int32)
+        # # seg = torch.from_numpy(seg)
+        # return pointcloud, label

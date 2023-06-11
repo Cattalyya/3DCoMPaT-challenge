@@ -46,12 +46,13 @@ def load_data(
                 points_mat_labels = np.array(hdf5_f["points_mat_labels"])
 
         if normalize_points:
-            points = np.zeros(points.shape)
+            norm_points = np.zeros((points.shape[0], points.shape[1], 3))
+            # TODO_BUG_REPORT(cattalyya): Report bug `points = np.zeros()` causes normalize to be all zeros.
             for i in range(points.shape[0]):
-                points[i] = pc_normalize(points[i])
+                norm_points[i] = pc_normalize(points[i,:,:3])
 
     # Alternative: return a list of tensors
-    ret_list = [points, shape_ids]
+    ret_list = [norm_points if normalize_points else points, shape_ids]
     if is_rgb:
         ret_list.append(style_ids)
 
@@ -159,11 +160,14 @@ class StylizedShapeLoader_PC(CompatLoader3D_PC):
         ...:    See CompatLoader3D_PC.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, random=True, **kwargs):
+        self.random = random
         super().__init__(*args, **kwargs)
 
     def __getitem__(self, item):
-        idx = np.random.choice(self.max_points, self.num_points, True)
+        idx = range(self.num_points)
+        if self.random:
+            idx = np.random.choice(self.max_points, self.num_points, True)
 
         points = torch.from_numpy(self.points[item][idx].astype(np.float32))
 
@@ -206,7 +210,8 @@ class EvalLoader_PC(CompatLoader3D_PC):
         ...:    See CompatLoader3D_PC.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, random=False, **kwargs):
+        self.random = random
         super().__init__(*args, **kwargs)
 
     def __getitem__(self, item):
