@@ -1,5 +1,6 @@
 """
 Train a part segmentation model.
+python train_matseg.py --data_name=coarse --batch_size=128
 """
 import argparse
 import datetime

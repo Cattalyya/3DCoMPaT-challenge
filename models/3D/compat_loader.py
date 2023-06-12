@@ -38,7 +38,6 @@ def load_data(data_dir, partition, seg_mode):
             point_label_key = "points_labels" if seg_mode == "" else "points_{}_labels".format(seg_mode)
             points_labels = np.array(f[point_label_key][:]).astype("uint16")
         shape_ids = f["shape_id"][:].astype("str")
-        NP =1
         # print(len(f["points"][0]), f["shape_label"][0], len(f[point_label_key][0]), len(f["points_mat_labels"][0]))
         shape_labels = None
         if partition != "test":

@@ -1,5 +1,6 @@
 """
 Training script for 3D classification.
+python train_cls.py --data_name=coarse --batch_size=128 --num_point=2048
 """
 import argparse
 import datetime
@@ -161,10 +162,10 @@ def main(args):
     log_string("Load dataset ...")
     root = os.path.join(os.getcwd(), "data/" + args.data_name + "_grained/")
     TRAIN_DATASET = Compat(
-        data_root=root, num_points=args.num_point, split="train", transform=None, seg_mode="part"
+        data_root=root, num_points=args.num_point, split="train", transform=None, seg_mode="mat"
     )
     VAL_DATASET = Compat(
-        data_root=root, num_points=args.num_point, split="valid", transform=None, seg_mode="part"
+        data_root=root, num_points=args.num_point, split="valid", transform=None, seg_mode="mat"
     )
 
     trainDataLoader = torch.utils.data.DataLoader(
@@ -186,7 +187,7 @@ def main(args):
     if args.model == "curvenet_cls":
         classifier = model.get_model(num_class, npoints=args.num_point)
     else:
-        classifier = model.get_model(num_class, normal_channel=args.use_normals)
+        classifier = model.get_model(num_class, normal_channel=args.use_normals, n_ch=6)
 
     criterion = model.get_loss()
     classifier.apply(inplace_relu)
