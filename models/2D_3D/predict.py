@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.abspath(
 from pointnet2 import PointNet2
 
 from helper_2d3d import *
+from feature_utils import FeatureFile
 
 
 class Cfg:
@@ -133,6 +134,9 @@ def parse_args(argv):
     parser.add_argument(
         "--normal", action="store_true", default=False, help="use normals"
     )
+    parser.add_argument(
+        "--feature", action="store_true", default=False, help="save feature"
+    )
     args = parser.parse_args(argv)
 
     # Printing input arguments
@@ -143,7 +147,8 @@ def parse_args(argv):
 
 def inference(segformer, pointnet2, points, image, shape_id, style_id, cam_parameters, \
               saved_cls_predictions, saved_part_predictions, saved_mat_predictions, \
-              saved_part_fused_logits, saved_mat_fused_logits, args):
+              saved_part_fused_logits, saved_mat_fused_logits,\
+              saved_part_each_logits, saved_mat_each_logits, args):
     with torch.no_grad():
         predicted_cls, predicted_parts, predicted_mats, predicted, predicted3d = None, None, None, None, None
 
@@ -158,48 +163,60 @@ def inference(segformer, pointnet2, points, image, shape_id, style_id, cam_param
             ## ======= 2.1 Predict partseg 2D
             outputs, logits, predicted = segformer.infer_part(image)
             ## ======= 2.2. Predict partseg 3D
-            pointnet2.partmodel = pointnet2.partmodel.eval()
-            logits3d, predicted3d = pointnet2.infer_part(points.cpu(), predicted_cls) # TODO(cattalyya): change back to point3D or support 6D with flag.
-            logits3d =  logits3d.cpu()
-            predicted_parts = predicted3d
+            if not args.feature:
+                pointnet2.partmodel = pointnet2.partmodel.eval()
+                logits3d, predicted3d = pointnet2.infer_part(points.cpu(), predicted_cls) # TODO(cattalyya): change back to point3D or support 6D with flag.
+                logits3d =  logits3d.cpu()
+                predicted_parts = predicted3d
             ## ======= 2.3. Fuse partseg 2D & 3D
             if args.fusepart:
                 logits3d_from2d = get_logits_from2d(points.cpu(), logits.cpu(), cam_parameters.cpu())
-                zeros_tensor = torch.zeros((logits3d.shape[0], logits3d.shape[1], 1)).cpu()
-                # Concatenate the original tensor with the zeros tensor along the third dimension
-                logits3d_extended = torch.cat((zeros_tensor, logits3d), dim=2).cpu()
-                fused_logits = logits3d_from2d + logits3d_extended
+                if not args.feature:
+                    zeros_tensor = torch.zeros((logits3d.shape[0], logits3d.shape[1], 1)).cpu()
+                    # Concatenate the original tensor with the zeros tensor along the third dimension
+                    logits3d_extended = torch.cat((zeros_tensor, logits3d), dim=2).cpu()
+                    fused_logits = logits3d_from2d + logits3d_extended
                 ## ==== 2.4. Update multi-view fused predictions (temporal)
-                saved_part_fused_logits = update_part_logits(saved_part_fused_logits, shape_id, style_id, fused_logits)
-                predicted_parts = get_fused_prediction(fused_logits, predicted3d) # numpy format
+                if not args.feature:
+                    saved_part_fused_logits = update_part_logits(saved_part_fused_logits, shape_id, style_id, fused_logits)
+                    predicted_parts = get_fused_prediction(fused_logits, predicted3d) # numpy format
+                else:
+                    saved_part_each_logits = update_each_logits(saved_part_each_logits, shape_id, style_id, logits3d_from2d)
 
         ## ==== 3. Predict mat segmentation 
         if saved_mat_predictions != None:
             ## ======= 3.1 Predict matseg 2D
             outputs_mat, logits_mat, predicted_mat = segformer.infer_mat(image)
             ## ======= 3.2. Predict matseg 3D
-            pointnet2.matmodel = pointnet2.matmodel.eval()
-            logits3d_mat, predicted3d_mat = pointnet2.infer_mat(points.cpu(), predicted_cls)
-            logits3d_mat = logits3d_mat.cpu()
-            predicted_mats = predicted3d_mat
+            if not args.feature:
+                pointnet2.matmodel = pointnet2.matmodel.eval()
+                logits3d_mat, predicted3d_mat = pointnet2.infer_mat(points.cpu(), predicted_cls)
+                logits3d_mat = logits3d_mat.cpu()
+                predicted_mats = predicted3d_mat
             ## ======= 3.3. Fuse matseg 2D & 3D
             if args.fusemat:
                 logits3d_mat_from2d = get_logits_from2d(points.cpu(), logits_mat.cpu(), cam_parameters.cpu())
-                zeros_tensor = torch.zeros((logits3d_mat.shape[0], logits3d_mat.shape[1], 1)).cpu()
-                # Concatenate the original tensor with the zeros tensor along the third dimension
-                logits3d_mat_extended = torch.cat((zeros_tensor, logits3d_mat), dim=2).cpu()
-                # print(logits3d_mat.shape, zeros_tensor.shape, logits3d_mat_from2d.shape, logits3d_mat_extended.shape)
-                fused_mat_logits = logits3d_mat_from2d + logits3d_mat_extended
+                if not args.feature:
+                    zeros_tensor = torch.zeros((logits3d_mat.shape[0], logits3d_mat.shape[1], 1)).cpu()
+                    # Concatenate the original tensor with the zeros tensor along the third dimension
+                    logits3d_mat_extended = torch.cat((zeros_tensor, logits3d_mat), dim=2).cpu()
+                    # print(logits3d_mat.shape, zeros_tensor.shape, logits3d_mat_from2d.shape, logits3d_mat_extended.shape)
+                    fused_mat_logits = logits3d_mat_from2d + logits3d_mat_extended
                 ## ==== 3.4. Update multi-view fused predictions (temporal)
-                saved_mat_fused_logits = update_part_logits(saved_mat_fused_logits, shape_id, style_id, fused_mat_logits)
-                predicted_mats = get_fused_prediction(fused_mat_logits, predicted3d_mat)
+                if not args.feature:
+                    saved_mat_fused_logits = update_part_logits(saved_mat_fused_logits, shape_id, style_id, fused_mat_logits)
+                    predicted_mats = get_fused_prediction(fused_mat_logits, predicted3d_mat)
+                else:
+                    saved_mat_each_logits = update_each_logits(saved_mat_each_logits, shape_id, style_id, logits3d_mat_from2d)
 
         predicted_cls = predicted_cls.cpu().data.numpy()
-        saved_cls_predictions, saved_part_predictions, saved_mat_predictions = update_predictions(
-                shape_id, style_id, predicted_cls, predicted_parts, predicted_mats, 
-                saved_cls_predictions, saved_part_predictions, saved_mat_predictions)
+        if not args.feature:
+            saved_cls_predictions, saved_part_predictions, saved_mat_predictions = update_predictions(
+                    shape_id, style_id, predicted_cls, predicted_parts, predicted_mats, 
+                    saved_cls_predictions, saved_part_predictions, saved_mat_predictions)
 
-    return predicted_cls, predicted, predicted3d, predicted_parts, predicted_mats, saved_cls_predictions, saved_part_predictions, saved_mat_predictions, saved_part_fused_logits, saved_mat_fused_logits
+    return predicted_cls, predicted, predicted3d, predicted_parts, predicted_mats, saved_cls_predictions, saved_part_predictions, saved_mat_predictions, \
+        saved_part_fused_logits, saved_mat_fused_logits, saved_part_each_logits, saved_mat_each_logits
 
 def get_loader(split, args):
 
@@ -258,6 +275,7 @@ def main(argv=None):
 
     # =============== Setup Output ===============
     saved_part_fused_logits, saved_mat_fused_logits = dict(), dict()
+    saved_part_each_logits, saved_mat_each_logits = dict(), dict()
     saved_part_predictions = dict() if part_log_dir != "" else None
     saved_mat_predictions = dict() if mat_log_dir != "" else None
     saved_cls_predictions = dict()
@@ -267,6 +285,7 @@ def main(argv=None):
     key_order_map = {key: i for i,key in enumerate(interest_order)}
     active_columns = [cls_log_dir != "", part_log_dir != "", mat_log_dir != "", False, False]
     submission = Submission(len(interest_order), active_columns, outpath="submission.hdf5")
+    featureFile = FeatureFile(len(interest_order), Cfg.PART_CLASSES, Cfg.MAT_CLASSES, active_columns[1:])
 
     # =============== Load Dataset ===============
     loader_2D_3D = get_loader(args.split, args)
@@ -296,9 +315,10 @@ def main(argv=None):
         with torch.no_grad():
             predicted_cls, predicted, predicted3d, predicted_parts, predicted_mats,\
             saved_cls_predictions, saved_part_predictions, saved_mat_predictions, \
-            saved_part_fused_logits, saved_mat_fused_logits = \
+            saved_part_fused_logits, saved_mat_fused_logits, saved_part_each_logits, saved_mat_each_logits = \
                 inference(segformer, pointnet2, points, image, shape_id, style_id, cam_parameters, \
-                          saved_cls_predictions, saved_part_predictions, saved_mat_predictions, saved_part_fused_logits, saved_mat_fused_logits, args)
+                          saved_cls_predictions, saved_part_predictions, saved_mat_predictions, \
+                          saved_part_fused_logits, saved_mat_fused_logits, saved_part_each_logits, saved_mat_each_logits, args)
         # ====== Compute evaluation 
         if gt_available_mode:
             correct3d = np.sum(points_part_labels == predicted3d)
@@ -328,21 +348,31 @@ def main(argv=None):
         ## ======= Result Checkpoint 
         if i % 50 == 0:
             ## ====== Save prediction to avoid RAM explode (actually explode 200GB @260 iters)
-            print("Example Prediction of {}_{}: Cls: {}\tPart: {} (Expect: {})\tMat: {} (Expect: {})".format(\
-                    shape_id[0], style_id[0], predicted_cls[0],  \
-                    predicted_parts[0] if part_log_dir != "" else "Disabled", points_part_labels[0] if gt_available_mode else "N/A", \
-                    predicted_mats[0] if mat_log_dir != "" else "Disabled", points_mat_labels[0] if gt_available_mode else "N/A"))
-            save_submission(submission, saved_cls_predictions, saved_part_predictions, saved_mat_predictions, key_order_map)
+            if not args.feature:
+                print("Example Prediction of {}_{}: Cls: {}\tPart: {} (Expect: {})\tMat: {} (Expect: {})".format(\
+                        shape_id[0], style_id[0], predicted_cls[0],  \
+                        predicted_parts[0] if part_log_dir != "" else "Disabled", points_part_labels[0] if gt_available_mode else "N/A", \
+                        predicted_mats[0] if mat_log_dir != "" else "Disabled", points_mat_labels[0] if gt_available_mode else "N/A"))
+                save_submission(submission, saved_cls_predictions, saved_part_predictions, saved_mat_predictions, key_order_map)
+            else:
+                save_features(featureFile, saved_part_each_logits, saved_mat_each_logits, key_order_map)
             # Clean up.
-            saved_cls_predictions, saved_part_fused_logits, saved_mat_fused_logits = dict(), dict(), dict()
+            saved_cls_predictions, saved_part_fused_logits, saved_mat_fused_logits, saved_part_each_logits, saved_mat_each_logits = dict(), dict(), dict(), dict(), dict()
             saved_part_predictions, saved_mat_predictions = dict() if part_log_dir != "" else None, dict() if part_log_dir != "" else None
         if args.debug:
             break
     # ===== Save the last part of predictions to submission and perform sanity check.
-    save_submission(submission, saved_cls_predictions, saved_part_predictions, saved_mat_predictions, key_order_map)
+    if not args.feature:
+        save_submission(submission, saved_cls_predictions, saved_part_predictions, saved_mat_predictions, key_order_map)
+    else:
+        save_features(featureFile, saved_part_each_logits, saved_mat_each_logits, key_order_map)
+
     if not args.debug:
-        # Skip sanity check if debug because debug run will not run to completion/get all predictions.
-        submission.sanity_check([cls_log_dir, part_log_dir, mat_log_dir], args.split)
+        if not args.feature:
+            # Skip sanity check if debug because debug run will not run to completion/get all predictions.
+            submission.sanity_check([cls_log_dir, part_log_dir, mat_log_dir], args.split)
+        else:
+            featureFile.sanity_check(args.split)
     if gt_available_mode:
         print("=========== Accuracy Summary ============")
         print("Cls Accuracy: {}/{}={}".format(total_correct_cls, total_seen_cls, float(total_correct_cls)/total_seen_cls))
