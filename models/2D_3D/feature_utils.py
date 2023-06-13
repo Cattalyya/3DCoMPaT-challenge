@@ -25,12 +25,22 @@ class FeatureFile:
         self.active_columns = active_columns
         n_views = 8
         with h5py.File(outpath, 'w') as file:
+            # Save all
+            # file.create_dataset('partseg_2dlogits',
+            #                             shape=(n_shapes, N_POINTS, n_views+1, n_parts), # add sum up
+            #                             dtype='float',
+            #                             fillvalue=NULL)
+            # file.create_dataset('matseg_2dlogits',
+            #                             shape=(n_shapes, N_POINTS, n_views+1, n_mats),
+            #                             dtype='float',
+            #                             fillvalue=NULL)
+            # Save sum
             file.create_dataset('partseg_2dlogits',
-                                        shape=(n_shapes, N_POINTS, n_views+1, n_parts), # add sum up
+                                        shape=(n_shapes, N_POINTS, n_parts), # add sum up
                                         dtype='float',
                                         fillvalue=NULL)
             file.create_dataset('matseg_2dlogits',
-                                        shape=(n_shapes, N_POINTS, n_views+1, n_mats),
+                                        shape=(n_shapes, N_POINTS, n_mats),
                                         dtype='float',
                                         fillvalue=NULL)
 
@@ -46,7 +56,7 @@ class FeatureFile:
                 self.visited[column_name].add(key)
 
     def sanity_check(self, split):
-        EXPECT_SIZE = 12560 if split == "test" else 6770
+        EXPECT_SIZE = 12560 if split == "test" else 6770 if "val" else 80760 if "train" else None
         # assert len(self.visited[ACTIVE_PREDICTIONS[0]]) == len(self.visited[ACTIVE_PREDICTIONS[1]])
         with h5py.File(self.outpath, 'r') as file:
             for i, column_name in enumerate(self.column_names):
