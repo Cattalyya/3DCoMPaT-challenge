@@ -12,12 +12,12 @@ N_POINTS = 2048
 MAX_GROUPS = 30
 
 
-hdf5_name = "/home/ubuntu/3dcompat/workspace/submission/shape_preds_zeropads.hdf5"
+hdf5_name = "/home/ubuntu/3dcompat/submissions/cls_part_fusedmat.hdf5"
 submission_file = "/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D_3D/submission.hdf5"
 submission_file_best = "/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D_3D/cls_rand.hdf5"
 
 fbest = open_hdf5(submission_file_best, 'r')
-f = open_hdf5(submission_file, 'r')
+f = open_hdf5(hdf5_name, 'r')
 print(f.keys())
 
 print(f['shape_preds'].shape, f['part_labels'].shape, f['mat_labels'].shape, f['part_mat_pairs'].shape, f['point_grouping'].shape)
@@ -37,6 +37,7 @@ print(fbest['part_labels'][0])
 print("=== Mat ===")
 print("Curr unique: ", np.unique(f['mat_labels']))
 print("Best unique: ", np.unique(fbest['mat_labels']))
+print("Curr Unique PartMatPairs: ", np.unique(f['part_mat_pairs']))
 
 # print([f['shape_preds'][i] for i in range(30)], np.unique(f['shape_preds']), np.unique(f['part_labels']))
 # train_hdf5['shape_preds'][k]    = shape_preds_np[k]

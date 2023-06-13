@@ -50,6 +50,26 @@ def update_part_logits(saved_results, shape_ids, style_ids, fused_logits):
         saved_results[key] = accu_logits + fused_logits[i]
     return saved_results
 
+def update_each_logits(saved_results, shape_ids, style_ids, logits):
+    n_views = 8
+    style_ids = style_ids.cpu().data.numpy()
+    for i, shape_id in enumerate(shape_ids):
+        key = get_key(shape_id, style_ids[i])
+        if key not in saved_results:
+            saved_results[key] = logits[i].unsqueeze(0)
+        else:
+            saved_results[key] = torch.cat((saved_results[key], logits[i].unsqueeze(0)), dim=0)
+        assert saved_results[key].shape[0] <= n_views + 1
+        if saved_results[key].shape[0] == n_views:
+            saved_results[key] = torch.cat((saved_results[key], torch.sum(saved_results[key], dim=0).unsqueeze(0)), dim=0) # TODO: need to unsqueeze?
+            assert saved_results[key][8][3][12] == sum([saved_results[key][j][3][12] for j in range(n_views)])
+            # print("logit/sum shape: ", saved_results[key], torch.sum(saved_results[key], dim=0).shape)
+            # saved_results[key] = saved_results[key].transpose(0, 1)
+            saved_results[key] = saved_results[key].transpose(1,0)
+
+
+    return saved_results
+
 def update_predictions(shape_ids, style_ids, predicted_cls, predicted_parts, predicted_mats, saved_cls_predictions, saved_part_predictions, saved_mat_predictions):
     style_ids = style_ids.cpu().data.numpy()
     for i, shape_id in enumerate(shape_ids):
@@ -87,6 +107,11 @@ def save_submission(submission, cls, parts, mats, test_order_map):
     if mats != None:
         submission.update_batched('mat_labels', mats, test_order_map)
 
+def save_features(featureFile, feature_parts, feature_mats, order_map):
+    if feature_parts != None:
+        featureFile.update_batched('partseg_2dlogits', feature_parts, order_map)
+    if feature_mats != None:
+        featureFile.update_batched('matseg_2dlogits', feature_mats, order_map)
 # def update_submission(filename, column_name, predictions, test_order_map):
 #     # Open the HDF5 file in 'a' (append) mode
 #     with h5py.File(filename, 'a') as file:
