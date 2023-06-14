@@ -46,16 +46,16 @@ class FeatureFile:
                 self.visited[column_name].add(key)
 
     def sanity_check(self, split):
-        EXPECT_SIZE = 12560 if split == "test" else 6770
+        EXPECT_SIZE = 12560 if split == "test" else 6770 if "val" else 80760 if "train" else None
         # assert len(self.visited[ACTIVE_PREDICTIONS[0]]) == len(self.visited[ACTIVE_PREDICTIONS[1]])
         with h5py.File(self.outpath, 'r') as file:
             for i, column_name in enumerate(self.column_names):
                 if not self.active_columns[i]:
                     continue
                 column_data = file[column_name]
-                assert ~np.isin(self.MAX_UINT8, column_data), \
+                assert ~np.isin(NULL, column_data), \
                     "Column {} contains null ({}) data: {}. An example null-value key is {}. Data={}".format(\
-                        column_name, self.MAX_UINT8, np.unique(column_data),\
+                        column_name, NULL, np.unique(column_data),\
                         np.where(column_data==NULL), [s for s in column_data])
 
                 assert len(self.visited[column_name]) == EXPECT_SIZE, \

@@ -160,7 +160,8 @@ def inference(segformer, pointnet2, points, rgb_points, image, shape_id, style_i
         if saved_part_predictions != None:
         ## ==== 2. Predict part segmentation
             ## ======= 2.1 Predict partseg 2D
-            outputs, logits, predicted = segformer.infer_part(image)
+            if segformer:
+                outputs, logits, predicted = segformer.infer_part(image)
             ## ======= 2.2. Predict partseg 3D
             if not args.feature:
                 pointnet2.partmodel = pointnet2.partmodel.eval()
@@ -185,7 +186,8 @@ def inference(segformer, pointnet2, points, rgb_points, image, shape_id, style_i
         ## ==== 3. Predict mat segmentation 
         if saved_mat_predictions != None:
             ## ======= 3.1 Predict matseg 2D
-            outputs_mat, logits_mat, predicted_mat = segformer.infer_mat(image)
+            if segformer:
+                outputs_mat, logits_mat, predicted_mat = segformer.infer_mat(image)
             ## ======= 3.2. Predict matseg 3D
             if not args.feature:
                 pointnet2.matmodel = pointnet2.matmodel.eval()
@@ -263,13 +265,14 @@ def main(argv=None):
 
     # =============== Load Models ===============
     ### ===== 1. Load 2D Model =======
+    # segformer=None
     segformer_part_pretrain_path = '/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D/segmentation/pretrain/coarse_part_best_model.pth'
     segformer_mat_pretrain_path = '/home/ubuntu/3dcompat/workspace/3DCoMPaT-v2/models/2D/segmentation/pretrain/coarse_mat_best_model.pth'
     segformer = SegFormer2D(segformer_part_pretrain_path, segformer_mat_pretrain_path, args, Cfg.PART_CLASSES, Cfg.MAT_CLASSES)
     ### ===== 2. Load 3D Model =======
-    cls_log_dir = "2023-06-08_14-31"
-    part_log_dir = "2023-06-11_13-33" #"2023-06-04_05-57"
-    mat_log_dir = "2023-06-10_09-20"
+    cls_log_dir = "2023-06-12_22-33" if args.data_type == "fine" else "2023-06-08_14-31"
+    part_log_dir = "2023-06-11_21-33" if args.data_type == "fine" else "2023-06-11_13-33" #"2023-06-04_05-57"
+    mat_log_dir = "2023-06-11_22-04" if args.data_type == "fine" else "2023-06-10_09-20"
     pointnet2 = PointNet2(cls_log_dir, part_log_dir, mat_log_dir, shape_prior, args)
 
     # =============== Setup Output ===============
