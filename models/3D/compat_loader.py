@@ -33,10 +33,10 @@ def load_data(data_dir, partition, seg_mode):
         # points = np.array(f["points"][:]).astype("float32")
         points = np.array(f["points"][:, :,:N_CH]).astype("float32")
         # points_labels = np.array(f["points_labels"][:]).astype("uint16")
-        points_labels = None
+        points_part_labels = None
         if partition != "test":
-            point_label_key = "points_labels" if seg_mode == "" else "points_{}_labels".format(seg_mode)
-            points_labels = np.array(f[point_label_key][:]).astype("uint16")
+            points_part_labels = np.array(f["points_part_labels"][:]).astype("uint16")
+            points_mat_labels = np.array(f["points_mat_labels"][:]).astype("uint16")
         shape_ids = f["shape_id"][:].astype("str")
         NP =1
         # print(len(f["points"][0]), f["shape_label"][0], len(f[point_label_key][0]), len(f["points_mat_labels"][0]))
@@ -47,8 +47,15 @@ def load_data(data_dir, partition, seg_mode):
         normalized_points = np.zeros(points.shape)
         for i in range(points.shape[0]):
             normalized_points[i] = pc_normalize(points[i])
-
-    return normalized_points, points_labels, shape_ids, shape_labels
+            
+        return normalized_points, points_part_labels, points_mat_labels, shape_ids, shape_labels
+        # if segmode="partmat":
+        #     return normalized_points, points_part_labels, points_mat_labels, shape_ids, shape_labels
+        # elif segmode == "part":
+        #     return normalized_points, points_part_labels, shape_ids, shape_labels
+        # elif segmode == "mat":
+        #     return normalized_points, points_mat_labels, shape_ids, shape_labels
+    # return normalized_points, np.array(f["points_labels"][:]).astype("uint16"), shape_ids, shape_labels
 
 
 class CompatLoader3D(Dataset):
@@ -75,13 +82,14 @@ class CompatLoader3D(Dataset):
         # train, test, valid
         self.partition = split.lower()
         self.seg_mode = seg_mode
-        self.data, self.seg, self.shape_ids, self.label = load_data(
+        self.data, self.partseg, self.matseg, self.shape_ids, self.label = load_data(
             data_root, self.partition, self.seg_mode
         )
 
         self.num_points = num_points
         self.transform = transform
         self.random = random
+        self.pm = set()
 
     def __getitem__(self, item):
         MAX_RAND = self.num_points
@@ -90,9 +98,22 @@ class CompatLoader3D(Dataset):
             idx = np.random.choice(MAX_RAND, self.num_points, False)
         pointcloud = self.data[item][idx]
         label = self.label[item]
-        seg = self.seg[item][idx].astype(np.int32)
+        partseg = self.partseg[item][idx].astype(np.int32)
+        matseg = self.matseg[item][idx].astype(np.int32)
         shape_id = self.shape_ids[item]
         pointcloud = torch.from_numpy(pointcloud)
+        seg = self.partseg if self.seg_mode == "part" else self.matseg if self.seg_mode == "mat" else None
+        
+        for p, m in zip(partseg, matseg):
+            self.pm.add(p * 100 + m)
+        # print(len(self.pm))
+        if self.seg_mode == "partmat":
+            # seg = np.concatenate((partseg, matseg), axis=0).astype(np.int32)
+            seg = partseg * self.num_mats() + matseg
+            # seg = np.stack((partseg, matseg), axis=0)
+            # print(seg.shape)
+            # seg =  np.array([partseg, matseg]).astype(np.int32)
+        # print(partseg, matseg, seg)
         seg = torch.from_numpy(seg)
         return pointcloud, label, seg, shape_id
 
@@ -102,8 +123,11 @@ class CompatLoader3D(Dataset):
     def num_classes(self):
         return np.max(self.label) + 1
 
-    def num_segments(self):
-        return np.max(self.seg) + 1
+    def num_parts(self):
+        return np.max(self.partseg) + 1
+
+    def num_mats(self):
+        return np.max(self.matseg) + 1
 
     def get_shape_label(self):
         return self.label
