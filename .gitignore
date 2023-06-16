@@ -15,6 +15,7 @@ __pycache__/
 models/*/log/
 models/*/*/logs/
 models/*/*/ckpts/
+models/*/*/*/ckpt/
 models/*/pretrain/
 models/*/*/pretrain/
 models/2D_3D/out_np/
