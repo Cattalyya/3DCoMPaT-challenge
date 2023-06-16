@@ -83,9 +83,9 @@ def load_data(data_dir, partition, seg_mode, use_features=False):
             top_indices = sorted_matlogits[:, :3]
             half_nmats = seglogits.shape[2] // 2
             normalized_top3[i] = (top_indices - half_nmats) / half_nmats
-        normalized_points = np.concatenate((normalized_points, normalized_top3), axis=2)
+        normalized_part_points = np.concatenate((normalized_points, normalized_top3), axis=2)
 
-    return normalized_points, points_part_labels, points_mat_labels, shape_ids, shape_labels
+    return normalized_points, normalized_part_points, points_part_labels, points_mat_labels, shape_ids, shape_labels
 
 
 class CompatLoader3D(Dataset):
