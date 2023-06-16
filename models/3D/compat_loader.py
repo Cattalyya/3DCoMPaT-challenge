@@ -22,7 +22,7 @@ def pc_normalize(pc):
     return pc
 
 
-def load_data(data_dir, partition, seg_mode):
+def load_data(data_dir, partition, seg_mode, use_features=False):
     """
     Pre-load and process the pointcloud data into memory.
     """
@@ -35,8 +35,8 @@ def load_data(data_dir, partition, seg_mode):
         # points_labels = np.array(f["points_labels"][:]).astype("uint16")
         points_part_labels = None
         if partition != "test":
-            points_part_labels = np.array(f["points_part_labels"][:]).astype("uint16")
-            points_mat_labels = np.array(f["points_mat_labels"][:]).astype("uint16")
+            points_part_labels = np.array(f["points_part_labels"][:]).astype("int16")
+            points_mat_labels = np.array(f["points_mat_labels"][:]).astype("uint8")
         shape_ids = f["shape_id"][:].astype("str")
         NP =1
         # print(len(f["points"][0]), f["shape_label"][0], len(f[point_label_key][0]), len(f["points_mat_labels"][0]))
@@ -47,15 +47,45 @@ def load_data(data_dir, partition, seg_mode):
         normalized_points = np.zeros(points.shape)
         for i in range(points.shape[0]):
             normalized_points[i] = pc_normalize(points[i])
-            
-        return normalized_points, points_part_labels, points_mat_labels, shape_ids, shape_labels
-        # if segmode="partmat":
-        #     return normalized_points, points_part_labels, points_mat_labels, shape_ids, shape_labels
-        # elif segmode == "part":
-        #     return normalized_points, points_part_labels, shape_ids, shape_labels
-        # elif segmode == "mat":
-        #     return normalized_points, points_mat_labels, shape_ids, shape_labels
-    # return normalized_points, np.array(f["points_labels"][:]).astype("uint16"), shape_ids, shape_labels
+
+    partseg_2dlogits, matseg_2dlogits = None, None
+
+    if use_features:
+        features_file_name = os.path.join("/home/ubuntu/3dcompat/features/", "seg2d_logits_{}.hdf5".format(partition))
+        with h5py.File(features_file_name, "r") as ff:
+            partseg_2dlogits = ff["partseg_2dlogits"][:].astype("float32")
+            matseg_2dlogits = ff["matseg_2dlogits"][:].astype("float")
+
+        ## ======= Use logits
+        # normalized_partlogits = np.zeros(partseg_2dlogits.shape)
+        # normalized_matlogits = np.zeros(matseg_2dlogits.shape)
+        # for i in range(matseg_2dlogits.shape[0]):
+        #     # part_norm = np.linalg.norm(partseg_2dlogits[i], axis=1).reshape((partseg_2dlogits[i].shape[0], 1))
+        #     # part_norm_reshaped = np.tile(part_norm, (1, partseg_2dlogits[i].shape[1]))
+        #     # normalized_partlogits[i] = partseg_2dlogits[i] / part_norm_reshaped
+
+        #     mat_norm = np.linalg.norm(matseg_2dlogits[i], axis=1).reshape((matseg_2dlogits[i].shape[0], 1))
+        #     mat_norm_reshaped = np.tile(mat_norm, (1, matseg_2dlogits[i].shape[1]))
+        #     normalized_matlogits[i] = matseg_2dlogits[i] / mat_norm_reshaped
+
+        #     assert not np.isnan(mat_norm_reshaped).any()
+        #     assert not np.isinf(mat_norm_reshaped).any()
+        #     # print("\nPart:", partseg_2dlogits[i], normalized_partlogits[i], partseg_2dlogits[i].shape)
+        #     # print("\nMat:", matseg_2dlogits[i], normalized_matlogits[i], matseg_2dlogits[i].shape)
+        # normalized_points = np.concatenate((normalized_points, normalized_matlogits), axis=2)
+        
+        ## ===== Use top 3 ======
+        print(matseg_2dlogits.shape)
+        seglogits = partseg_2dlogits if seg_mode == "part" else matseg_2dlogits if seg_mode == "mat" else None
+        normalized_top3 = np.zeros(seglogits.shape)[:,:,:3]
+        for i in range(seglogits.shape[0]):
+            sorted_matlogits = np.argsort(-seglogits[i], axis=1)
+            top_indices = sorted_matlogits[:, :3]
+            half_nmats = seglogits.shape[2] // 2
+            normalized_top3[i] = (top_indices - half_nmats) / half_nmats
+        normalized_points = np.concatenate((normalized_points, normalized_top3), axis=2)
+
+    return normalized_points, points_part_labels, points_mat_labels, shape_ids, shape_labels
 
 
 class CompatLoader3D(Dataset):
@@ -77,13 +107,15 @@ class CompatLoader3D(Dataset):
         num_points=4096,
         transform=None,
         seg_mode="",
+        use_features=False,
         random=True,
     ):
         # train, test, valid
         self.partition = split.lower()
         self.seg_mode = seg_mode
+        self.use_features = use_features
         self.data, self.partseg, self.matseg, self.shape_ids, self.label = load_data(
-            data_root, self.partition, self.seg_mode
+            data_root, self.partition, self.seg_mode, use_features=use_features
         )
 
         self.num_points = num_points
@@ -102,18 +134,12 @@ class CompatLoader3D(Dataset):
         matseg = self.matseg[item][idx].astype(np.int32)
         shape_id = self.shape_ids[item]
         pointcloud = torch.from_numpy(pointcloud)
-        seg = self.partseg if self.seg_mode == "part" else self.matseg if self.seg_mode == "mat" else None
+        seg = partseg if self.seg_mode == "part" else matseg if self.seg_mode == "mat" else None
         
-        for p, m in zip(partseg, matseg):
-            self.pm.add(p * 100 + m)
         # print(len(self.pm))
         if self.seg_mode == "partmat":
             # seg = np.concatenate((partseg, matseg), axis=0).astype(np.int32)
             seg = partseg * self.num_mats() + matseg
-            # seg = np.stack((partseg, matseg), axis=0)
-            # print(seg.shape)
-            # seg =  np.array([partseg, matseg]).astype(np.int32)
-        # print(partseg, matseg, seg)
         seg = torch.from_numpy(seg)
         return pointcloud, label, seg, shape_id
 
@@ -157,8 +183,6 @@ class CompatLoader3DCls(CompatLoader3D):
         super().__init__(data_root, split, num_points, transform, seg_mode, random)
 
     def __getitem__(self, item):
-        # return super().__getitem__(item)
-        # print(item)
         idx = range(len(self.data[item]))
         if self.random:
             idx = np.random.choice(self.num_points, self.num_points, False)
@@ -170,6 +194,4 @@ class CompatLoader3DCls(CompatLoader3D):
             return pointcloud
 
         label = self.label[item]
-        # seg = self.seg[item][idx].astype(np.int32)
-        # seg = torch.from_numpy(seg)
         return pointcloud, label
