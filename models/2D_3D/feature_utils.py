@@ -25,12 +25,22 @@ class FeatureFile:
         self.active_columns = active_columns
         n_views = 8
         with h5py.File(outpath, 'w') as file:
+            # Save all
+            # file.create_dataset('partseg_2dlogits',
+            #                             shape=(n_shapes, N_POINTS, n_views+1, n_parts), # add sum up
+            #                             dtype='float',
+            #                             fillvalue=NULL)
+            # file.create_dataset('matseg_2dlogits',
+            #                             shape=(n_shapes, N_POINTS, n_views+1, n_mats),
+            #                             dtype='float',
+            #                             fillvalue=NULL)
+            # Save sum
             file.create_dataset('partseg_2dlogits',
-                                        shape=(n_shapes, N_POINTS, n_views+1, n_parts), # add sum up
+                                        shape=(n_shapes, N_POINTS, n_parts), # add sum up
                                         dtype='float',
                                         fillvalue=NULL)
             file.create_dataset('matseg_2dlogits',
-                                        shape=(n_shapes, N_POINTS, n_views+1, n_mats),
+                                        shape=(n_shapes, N_POINTS, n_mats),
                                         dtype='float',
                                         fillvalue=NULL)
 

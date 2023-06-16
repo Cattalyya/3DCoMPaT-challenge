@@ -61,12 +61,13 @@ def update_each_logits(saved_results, shape_ids, style_ids, logits):
             saved_results[key] = torch.cat((saved_results[key], logits[i].unsqueeze(0)), dim=0)
         assert saved_results[key].shape[0] <= n_views + 1
         if saved_results[key].shape[0] == n_views:
-            saved_results[key] = torch.cat((saved_results[key], torch.sum(saved_results[key], dim=0).unsqueeze(0)), dim=0) # TODO: need to unsqueeze?
-            assert saved_results[key][8][3][12] == sum([saved_results[key][j][3][12] for j in range(n_views)])
-            # print("logit/sum shape: ", saved_results[key], torch.sum(saved_results[key], dim=0).shape)
-            # saved_results[key] = saved_results[key].transpose(0, 1)
-            saved_results[key] = saved_results[key].transpose(1,0)
+            # # save all
+            # saved_results[key] = torch.cat((saved_results[key], torch.sum(saved_results[key], dim=0).unsqueeze(0)), dim=0) # TODO: need to unsqueeze?
+            # assert saved_results[key][8][3][12] == sum([saved_results[key][j][3][12] for j in range(n_views)])
+            # saved_results[key] = saved_results[key].transpose(1,0)
 
+            # save sum logits
+            saved_results[key] = torch.sum(saved_results[key], dim=0)
 
     return saved_results
 
