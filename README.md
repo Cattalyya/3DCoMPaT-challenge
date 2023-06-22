@@ -5,7 +5,7 @@
 <h1 align="center">
 </h1>
 <h1 align="center">
-    3DCoMPaT++: An improved Large-scale 3D Vision Dataset for Compositional Recognition
+    3DCoMPaT++: The Winning Solution 🏆 for 3D Compositional Part and Material Segmentation challenge.
 </h1>
 
 [![Jupyter Quickstart](https://img.shields.io/badge/Quickstart-orange?logo=google-colab&logoWidth=15)](https://colab.research.google.com/drive/1OpgYL_cxekAqZF8B8zuQZkPQxUIxzV0K?usp=sharing)
@@ -19,11 +19,10 @@
 
 ## Summary
 
-- [Introduction](#📚-introduction)
-- [Getting started](#🚀-getting-started)
-- [Baselines](#📊-baselines)
-- [Challenge](#🏆-challenge)
-- [Acknowledgments](#🙏-acknowledgments)
+- [Introduction](#-introduction)
+- [Getting started](#-getting-started)
+- [Model Performance](#-model-performance)
+- [Acknowledgments](#-acknowledgments)
 - [Citation](#citation)
 
 <br>
@@ -34,74 +33,62 @@
 
 ## 📚 Introduction
 
-3DCoMPaT++ is a multimodal 2D/3D dataset of 16 million rendered views of more than 10 million stylized 3D shapes carefully annotated at **part-instance** level, alongside matching **RGB pointclouds**, **3D textured meshes**, **depth maps** and **segmentation masks**. This work builds upon [3DCoMPaT](https://3dcompat-dataset.org/), the first version of this dataset.
+This repo contains the winning model 🏆 of both coarse and fine-grained tracks for [3DCoMPaT Grounded CoMPaT Recognition Challenge](https://eval.ai/web/challenges/challenge-page/2031/overview) organized by [C3DV CVPR 2023 workshop](https://3dcompat-dataset.org/workshop/). Built on top of the original [3DCoMPaT-v2 challenge codebase](https://github.com/Vision-CAIR/3DCoMPaT-v2), the model uses PointNet++ as a backbone and expands training to 6D (rgb). This 3D point clouds segmentation model achieves accuracy of material segmentation 98% (from 46%) and part segmentation 97% (from 85%). This work also explores multimodal 2D/ 3D training PointNet++ with 2D segmentation logits from the given [pretrained SegFormer](./models/2D/segmentation/) as well as top-3 2D segmentation label which is more effective in increasing accuracy (1-2%).
 
-**We plan to further extend the dataset: stay tuned!** 🔥
-
-<br>
-
-## 🔍 Browser
-
-To explore our dataset, please check out our integrated web browser:
-
-<a href="https://3dcompat-dataset.org/browser">
-    <p align="center">
-    <img src="img/browser_sticker.png"
-        alt="3DCoMPaT Browser"
-        style="width:600px;" />
-    </p>
-</a>
-
-For more information about the shape browser, please check out [our dedicated Wiki page](https://3dcompat-dataset.org/doc/browser.html).
+**We plan to further extend the work: stay tuned!** 🔥
 
 <br>
 
 ## 🚀 Getting started
 
-To get started straight away, here is a Jupyter notebook (no downloads required, just **run and play**!):
+### Train the model
+- To train the part segmentation model, run `python train_partseg.py --data_name=coarse --batch_size=128`.
+- To train the mat segmentation model, run `python train_matseg.py --data_name=coarse --batch_size=128`.
+- **The pre-trained model will be uploaded soon: stay tuned!** 
 
-[![Jupyter Quickstart](https://img.shields.io/badge/Quickstart-orange?logo=google-colab&logoWidth=15)](https://colab.research.google.com/drive/1OpgYL_cxekAqZF8B8zuQZkPQxUIxzV0K?usp=sharing)
-
-For a deeper dive into our dataset, please check our online documentation:
-
-[![Documentation](https://img.shields.io/badge/📚%20Documentation-blue?logoColor=white)](https://3dcompat-dataset.org/doc/)
-
-<br>
-
-## 📊 Baselines
-
-We provide baseline models for 2D and 3D tasks, following the structure below:
-
-- **2D Experiments**
-  - [2D Shape Classifier](./models/2D/shape_classifier/): ResNet50
-  - [2D Part and Material Segmentation](./models/2D/segmentation/): SegFormer
-- **3D Experiments**
-  - [3D Shape classification](./models/3D/): DGCNN - PCT - PointNet++ - PointStack - Curvenet - PointNext - PointMLP
-  - [3D Part segmentation](./models/3D/): PCT - PointNet++ - PointStack - Curvenet - PointNeXT
+### Inference
+- To run inference of shape classification, part and material segmentation together, `python predict.py  --data_type=coarse --n_comp=10 --batch_size=160 --split=test`.
 
 <br>
 
-## 🏆 Challenge
+## 📊 Model Performance
 
-As a part of the [C3DV CVPR 2023 workshop](https://3dcompat-dataset.org/workshop/), we are organizing a modelling challenge based on 3DCoMPaT++.
-To learn more about the challenge, check out this link:
+- Model performance comparison on shape-aware part and material segmentation. The first three rows (partseg) is measured by organizers as [reported here](https://github.com/Vision-CAIR/3DCoMPaT-v2/tree/main/models/3D).
 
-[![Challenge](https://img.shields.io/badge/🏆%20Challenge-critical?logoColor=white&logoWidth=20)](https://eval.ai/web/challenges/challenge-page/2031)
+### Performance on validation dataset
+#### **Coarse-grained**
+
+| Model                 | PartSeg Accuracy | PartSeg mIOU | MatSeg Accuracy | MatSeg mIOU | ckpt                                                                                            |
+| --------------------- | ---------------- | -------- | ---------------- | ------------------- | ----------------------------------------------------------------------------------------------- |
+| PointNet2             |  84.72    | 77.98            | 46.62             | 38.59              | [gdrive](https://drive.google.com/file/d/1HrwGvEr3RUq2KNKZCdPhho1y-krTmwwt/view?usp=share_link) |
+| Curvenet              |  86.01    | 80.64            | N/A              | N/A               | [gdrive](https://drive.google.com/file/d/1Q6yhwFemwIVcy1RivSIXJ0z_8Fz986I0/view?usp=share_link) |
+| PointNeXt             |  94.17    | 86.80            | N/A             | N/A              | [gdrive](https://drive.google.com/file/d/174EHOftBhupCRI3p-vRjQayB4Z_Z1rGG/view?usp=share_link) |
+| PointNet2 6D (ours)   |  **97.05**| **87.74**        | **98.65**           | **96.24**         | TODO |
+
+#### **Fine-grained**
+
+| Model                 | PartSeg Accuracy | PartSeg mIOU | MatSeg Accuracy | MatSeg mIOU |ckpt                                                                                            |
+| --------------------- | ---------------- | -------- | ---------------- | ------------------- | ----------------------------------------------------------------------------------------------- |
+| PointNet2             | 71.09         | 80.01          | TODO               | TODO               | [gdrive](https://drive.google.com/file/d/1_dPGJU1n4Q4pzm6ZxSw0W5zYKlP5mOcL/view?usp=share_link) |
+| Curvenet              | 72.49         | 81.37          | N/A              | N/A               | [gdrive](https://drive.google.com/file/d/1rmGNvb2uXPLqSDtOU7wGiz9Q_4nozd1D/view?usp=share_link) |
+| PointNeXt             | 82.07         | **83.92**      | N/A              | N/A               | [gdrive](https://drive.google.com/file/d/1ABNbcde2gMu0IU6Eub3BXkNr2HHvHFqN/view?usp=share_link) |
+| PointNet2 6D (ours)   | **86.33**     | 77.62          | **98.86**           | **94.42**         | TODO |
 
 <br>
+
+### **Challenge metrics compared with the baseline**
+<img src="img/score.png" width=800px/>
+
 
 ## 🙏 Acknowledgments
 
-⚙️ For computer time, this research used the resources of the Supercomputing Laboratory at [King Abdullah University of Science & Technology (KAUST)](https://www.kaust.edu.sa/).
-We extend our sincere gratitude to the [KAUST HPC Team](www.hpc.kaust.edu.sa) for their invaluable assistance and support during the course of this research project. Their expertise and dedication continues to play a crucial role in the success of our work.
-
-💾 We also thank the [Amazon Open Data](https://aws.amazon.com/opendata) program for providing us with free storage of our large-scale data on their servers. Their generosity and commitment to making research data widely accessible have greatly facilitated our research efforts.
+⚙️ Thank you Habib Slim, Professor Mohamed Elhoseiny, and the challenge organizer for making the great challenge and very useful codebase for us to experiment on top very easily.
 
 </br>
 
 ## Citation
 
-If you use our dataset, please cite the two following references:
+If you use their 3DCoMPaT++ dataset, please cite the two following references:
 
 ```bibtex
 @article{slim2023_3dcompatplus,
@@ -128,7 +115,7 @@ If you use our dataset, please cite the two following references:
 
 </br>
 
-This repository is owned and maintained by <a href="https://habibslim.github.io/">Habib Slim</a>, <a href="https://xiangli.ac.cn/">Xiang Li</a>, <a href="mahmoudalsayed@aucegypt.edu">Mahmoud Ahmed</a> and <a href="https://personal-website-mohamedayman15069.vercel.app/">Mohamed Ayman</a>, from the <a href="https://cemse.kaust.edu.sa/vision-cair">Vision-CAIR</a> group.
+This repository is owned and maintained by <a href="https://www.cattalyya.com/">Cattalyya Nuengsigkapian</a>.
 
 ## References
 
